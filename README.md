@@ -1,53 +1,41 @@
 
 # Marmita Express - Sistema de Pedidos Online
 
-Um sistema completo e profissional para gestão de pedidos de marmitarias, desenvolvido com React, Firebase e Tailwind CSS.
+## 🛠 Como rodar no seu computador (Local)
 
-## 🚀 Funcionalidades
+Para que o banco de dados funcione localmente, siga estes passos obrigatórios:
 
-- **Cardápio Online:** Listagem automática de produtos ativos com personalização.
-- **Login Opcional (Google):** Clientes podem logar para preenchimento automático.
-- **Carrinho e Edição:** Usuários podem editar itens já adicionados antes de fechar o pedido.
-- **Painel Admin Seguro:** Acesso restrito via E-mail/Senha (Logins via Google são bloqueados no painel).
-- **Logística Geográfica:** Cálculo de distância e bloqueio por raio de entrega.
-
-## 🛠 Configuração do Firebase
-
-1.  Crie um projeto no [Firebase Console](https://console.firebase.google.com/).
-2.  Ative o **Firestore Database**.
-3.  Ative o **Authentication** com os métodos:
-    - `E-mail/Senha` (Para o Admin)
-    - `Google` (Para os Clientes)
-4.  **IMPORTANTE (ERRO DE DOMÍNIO):**
-    Para que o login com Google funcione, você deve autorizar o domínio onde o site está rodando:
-    - Vá em `Authentication` -> `Settings` -> `Authorized Domains`.
-    - Clique em `Add Domain` e adicione o endereço do seu site (Ex: `seu-site.vercel.app` ou o domínio temporário do preview).
-5.  Copie suas credenciais e substitua no arquivo `firebase-config.ts`.
-
-### Regras de Segurança (Firestore)
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    match /products/{productId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'password';
-    }
-    match /orders/{orderId} {
-      allow create: if true;
-      allow read, update: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'password';
-    }
-    match /settings/{docId} {
-      allow read: if true;
-      allow write: if request.auth != null && request.auth.token.firebase.sign_in_provider == 'password';
-    }
-  }
-}
+### 1. Preparar o Ambiente
+No terminal da sua pasta, execute:
+```bash
+npm install
 ```
 
-## 💻 Como Rodar Localmente
+### 2. CONFIGURAÇÃO CRÍTICA (Firebase Console)
+O Firebase bloqueia conexões locais por segurança. Você precisa autorizar seu computador:
+1. Acesse o [Firebase Console](https://console.firebase.google.com/).
+2. Vá em **Authentication** -> aba **Settings**.
+3. Clique em **Authorized Domains** (Domínios Autorizados).
+4. Clique em **Add Domain**.
+5. Adicione: `localhost`
+6. Se estiver usando uma porta específica (ex: 5173), o Firebase já reconhece apenas o `localhost`.
 
-1.  Instale as dependências: `npm install`
-2.  Inicie o servidor de desenvolvimento: `npm start`
-3.  Acesse `http://localhost:3000`
+### 3. Executar o Sistema
+```bash
+npm run dev
+```
+
+### 💡 Dica de Especialista
+Se mesmo assim os dados não aparecerem, verifique as **Regras do Firestore** no console do Firebase. Para testes iniciais, você pode deixá-las em modo público (embora não recomendado para produção):
+
+```javascript
+allow read, write: if true;
+```
+
+---
+
+## 🚀 Estrutura
+- **Store.tsx**: Interface do cliente.
+- **AdminDashboard.tsx**: Saúde financeira e métricas.
+- **AdminOrders.tsx**: Gestão operacional de pedidos (Cozinha).
+- **AdminFinances.tsx**: Fluxo de caixa e despesas manuais.
