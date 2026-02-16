@@ -1,0 +1,5 @@
+{
+  "name": "Marmita Express - Sistema de Pedidos Online",
+  "description": "Um sistema profissional de pedidos para marmitarias com painel administrativo em tempo real, CRUD de produtos e integração com Firebase.",
+  "requestFramePermissions": []
+}
