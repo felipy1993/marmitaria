@@ -6,6 +6,8 @@ import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
 import AdminSettings from './pages/AdminSettings';
+import AdminFinances from './pages/AdminFinances';
+import AdminOrders from './pages/AdminOrders';
 import { onAuthStateChanged, User } from 'firebase/auth';
 import { auth } from './firebase-config';
 import { OrderItem } from './types';
@@ -15,6 +17,7 @@ export type CartItem = OrderItem;
 interface CartContextType {
   items: CartItem[];
   addToCart: (item: CartItem) => void;
+  updateCartItem: (productId: string, updatedItem: CartItem) => void;
   removeFromCart: (productId: string) => void;
   clearCart: () => void;
   total: number;
@@ -30,11 +33,14 @@ export const useCart = () => {
 
 const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     return onAuthStateChanged(auth, (u) => {
       setUser(u);
+      const isPass = u?.providerData.some(p => p.providerId === 'password');
+      setIsAdmin(!!isPass);
       setLoading(false);
     });
   }, []);
@@ -45,7 +51,13 @@ const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
     </div>
   );
 
-  if (!user) return <Navigate to="/admin/login" />;
+  if (!user || !isAdmin) {
+    if (user && !isAdmin) {
+      return <Navigate to="/" />;
+    }
+    return <Navigate to="/admin/login" />;
+  }
+  
   return <>{children}</>;
 };
 
@@ -56,11 +68,14 @@ const App: React.FC = () => {
     setItems(prev => {
       const existing = prev.find(i => i.productId === newItem.productId);
       if (existing) {
-        // Fix: Removed incorrect .newItem nested access on line 60
         return prev.map(i => i.productId === newItem.productId ? { ...i, quantity: i.quantity + newItem.quantity } : i);
       }
       return [...prev, newItem];
     });
+  };
+
+  const updateCartItem = (productId: string, updatedItem: CartItem) => {
+    setItems(prev => prev.map(item => item.productId === productId ? updatedItem : item));
   };
 
   const removeFromCart = (productId: string) => {
@@ -72,14 +87,16 @@ const App: React.FC = () => {
   const total = items.reduce((acc, item) => acc + (item.price * item.quantity), 0);
 
   return (
-    <CartContext.Provider value={{ items, addToCart, removeFromCart, clearCart, total }}>
+    <CartContext.Provider value={{ items, addToCart, updateCartItem, removeFromCart, clearCart, total }}>
       <HashRouter>
         <Routes>
           <Route path="/" element={<Store />} />
           <Route path="/admin/login" element={<AdminLogin />} />
           <Route path="/admin" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
+          <Route path="/admin/orders" element={<ProtectedRoute><AdminOrders /></ProtectedRoute>} />
           <Route path="/admin/products" element={<ProtectedRoute><AdminProducts /></ProtectedRoute>} />
           <Route path="/admin/settings" element={<ProtectedRoute><AdminSettings /></ProtectedRoute>} />
+          <Route path="/admin/finances" element={<ProtectedRoute><AdminFinances /></ProtectedRoute>} />
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </HashRouter>

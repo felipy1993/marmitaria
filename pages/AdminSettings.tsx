@@ -2,7 +2,7 @@
 import React, { useState, useEffect } from 'react';
 import { getRestaurantConfig, updateRestaurantConfig, getCoupons, addCoupon, deleteCoupon } from '../services/database';
 import { RestaurantConfig, Coupon } from '../types';
-import { LayoutDashboard, ShoppingBag, Settings, LogOut, Package, Save, Plus, Trash2, Tag, Truck, MapPin, Navigation, Search, Loader2 } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, Settings, LogOut, Package, Save, Plus, Trash2, Tag, Truck, MapPin, Navigation, Search, Loader2, Coins, Target, ClipboardList, PieChart, Eye } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase-config';
@@ -20,7 +20,12 @@ const AdminSettings: React.FC = () => {
     cep: ''
   });
   const [coupons, setCoupons] = useState<Coupon[]>([]);
-  const [newCoupon, setNewCoupon] = useState({ code: '', discountPercentage: 10 });
+  const [newCoupon, setNewCoupon] = useState({ 
+    code: '', 
+    discountPercentage: 10,
+    minOrderValue: 0,
+    availableQuantity: 100
+  });
   const [loading, setLoading] = useState(true);
   const [isFetchingGeo, setIsFetchingGeo] = useState(false);
 
@@ -84,8 +89,12 @@ const AdminSettings: React.FC = () => {
     e.preventDefault();
     if (!newCoupon.code) return;
     try {
-      await addCoupon({ ...newCoupon, active: true });
-      setNewCoupon({ code: '', discountPercentage: 10 });
+      await addCoupon({ 
+        ...newCoupon, 
+        active: true,
+        usedCount: 0 
+      });
+      setNewCoupon({ code: '', discountPercentage: 10, minOrderValue: 0, availableQuantity: 100 });
       const coup = await getCoupons();
       setCoupons(coup);
     } catch (err) {
@@ -105,14 +114,20 @@ const AdminSettings: React.FC = () => {
           <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
             <LayoutDashboard size={20} /> Dashboard
           </Link>
+          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
+            <ClipboardList size={20} /> Pedidos
+          </Link>
           <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
             <ShoppingBag size={20} /> Produtos
+          </Link>
+          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
+            <PieChart size={20} /> Financeiro
           </Link>
           <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg shadow-orange-500/20">
             <Settings size={20} /> Configurações
           </Link>
           <Link to="/" className="flex items-center gap-3 p-4 rounded-2xl text-orange-400 hover:bg-orange-500/10 transition-all font-bold mt-10">
-            <Navigation size={20} /> Ver Loja
+            <Eye size={20} /> Ver Loja
           </Link>
         </nav>
         <div className="p-4 border-t border-slate-800">
@@ -223,35 +238,70 @@ const AdminSettings: React.FC = () => {
               <h3 className="text-xl font-black text-slate-900">Cupons de Desconto</h3>
             </div>
             
-            <form onSubmit={handleAddCoupon} className="flex gap-4">
-              <input 
-                placeholder="CÓDIGO" 
-                className="flex-1 px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black uppercase outline-none" 
-                value={newCoupon.code} 
-                onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})}
-              />
-              <input 
-                type="number" 
-                placeholder="%" 
-                className="w-24 px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-black outline-none" 
-                value={newCoupon.discountPercentage} 
-                onChange={e => setNewCoupon({...newCoupon, discountPercentage: parseInt(e.target.value)})}
-              />
-              <button type="submit" className="p-4 bg-orange-500 text-white rounded-2xl hover:bg-orange-600 shadow-lg shadow-orange-500/20">
-                <Plus size={24} />
+            <form onSubmit={handleAddCoupon} className="space-y-6 bg-slate-50 p-6 rounded-3xl border border-slate-200">
+              <div className="grid grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Código do Cupom</label>
+                  <input 
+                    placeholder="EX: TRINTAOFF" 
+                    className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-black uppercase outline-none focus:border-orange-500" 
+                    value={newCoupon.code} 
+                    onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Desconto (%)</label>
+                  <input 
+                    type="number" 
+                    placeholder="0" 
+                    className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-black outline-none" 
+                    value={newCoupon.discountPercentage} 
+                    onChange={e => setNewCoupon({...newCoupon, discountPercentage: parseInt(e.target.value)})}
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Mínimo (R$)</label>
+                  <input 
+                    type="number" 
+                    placeholder="0" 
+                    className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-black outline-none" 
+                    value={newCoupon.minOrderValue} 
+                    onChange={e => setNewCoupon({...newCoupon, minOrderValue: parseFloat(e.target.value)})}
+                  />
+                </div>
+                <div className="col-span-2">
+                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1 ml-1">Qtde. Disponível</label>
+                  <input 
+                    type="number" 
+                    placeholder="Qtde total" 
+                    className="w-full px-5 py-4 bg-white border border-slate-200 rounded-2xl font-black outline-none" 
+                    value={newCoupon.availableQuantity} 
+                    onChange={e => setNewCoupon({...newCoupon, availableQuantity: parseInt(e.target.value)})}
+                  />
+                </div>
+              </div>
+              <button type="submit" className="w-full py-5 bg-orange-500 text-white font-black rounded-2xl shadow-lg shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center justify-center gap-2">
+                <Plus size={20} /> Criar Cupom
               </button>
             </form>
 
             <div className="space-y-3 max-h-[400px] overflow-y-auto pr-2 no-scrollbar">
               {coupons.map(coupon => (
-                <div key={coupon.id} className="flex justify-between items-center p-6 bg-slate-50 rounded-2xl border border-slate-200 group">
-                  <div>
-                    <span className="text-xs font-black text-orange-500 bg-orange-100 px-3 py-1 rounded-lg mr-3">{coupon.discountPercentage}% OFF</span>
-                    <span className="font-black text-slate-900 tracking-widest">{coupon.code}</span>
+                <div key={coupon.id} className="flex justify-between items-center p-6 bg-slate-50 rounded-2xl border border-slate-200 group relative overflow-hidden">
+                  <div className="relative z-10 flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                       <span className="text-[10px] font-black text-white bg-orange-500 px-3 py-1 rounded-full uppercase tracking-widest">{coupon.code}</span>
+                       <span className="text-[10px] font-black text-orange-600 bg-orange-100 px-3 py-1 rounded-full uppercase tracking-widest">{coupon.discountPercentage}% OFF</span>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                       <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Coins size={10}/> Pedido Mínimo: R$ {coupon.minOrderValue.toFixed(2)}</p>
+                       <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Target size={10}/> Disponível: {coupon.availableQuantity - (coupon.usedCount || 0)} / {coupon.availableQuantity}</p>
+                    </div>
                   </div>
-                  <button onClick={async () => { if(confirm('Excluir cupom?')) { await deleteCoupon(coupon.id!); loadData(); } }} className="text-slate-300 hover:text-red-500 p-2">
+                  <button onClick={async () => { if(confirm('Excluir cupom?')) { await deleteCoupon(coupon.id!); loadData(); } }} className="text-slate-300 hover:text-red-500 p-2 relative z-10">
                     <Trash2 size={20} />
                   </button>
+                  <div className="absolute top-0 right-0 h-full w-1 bg-orange-500/10"></div>
                 </div>
               ))}
               {coupons.length === 0 && <p className="text-center text-slate-400 font-bold py-10">Nenhum cupom ativo.</p>}

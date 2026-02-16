@@ -11,15 +11,17 @@ import {
   orderBy, 
   onSnapshot,
   setDoc,
-  getDoc
+  getDoc,
+  increment
 } from 'firebase/firestore';
 import { db } from '../firebase-config';
-import { Product, Order, OrderStatus, RestaurantConfig, Coupon } from '../types';
+import { Product, Order, OrderStatus, RestaurantConfig, Coupon, Transaction } from '../types';
 
 const PRODUCTS_COLLECTION = 'products';
 const ORDERS_COLLECTION = 'orders';
 const CONFIG_COLLECTION = 'settings';
 const COUPONS_COLLECTION = 'coupons';
+const TRANSACTIONS_COLLECTION = 'transactions';
 const DEFAULT_RESTAURANT_ID = 'main_marmita';
 
 // Products API
@@ -69,6 +71,17 @@ export const createOrder = async (order: Omit<Order, 'id' | 'createdAt' | 'statu
   });
 };
 
+export const getOrdersByPeriod = async (start: number, end: number): Promise<Order[]> => {
+  const q = query(
+    collection(db, ORDERS_COLLECTION),
+    where('createdAt', '>=', start),
+    where('createdAt', '<=', end),
+    orderBy('createdAt', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+};
+
 export const subscribeToOrders = (callback: (orders: Order[]) => void) => {
   const q = query(
     collection(db, ORDERS_COLLECTION),
@@ -94,6 +107,26 @@ export const subscribeToOrder = (orderId: string, callback: (order: Order | null
 export const updateOrderStatus = async (id: string, status: OrderStatus) => {
   const orderRef = doc(db, ORDERS_COLLECTION, id);
   return await updateDoc(orderRef, { status });
+};
+
+// Transactions (Finance) API
+export const getTransactionsByPeriod = async (start: number, end: number): Promise<Transaction[]> => {
+  const q = query(
+    collection(db, TRANSACTIONS_COLLECTION),
+    where('date', '>=', start),
+    where('date', '<=', end),
+    orderBy('date', 'desc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Transaction));
+};
+
+export const addTransaction = async (transaction: Omit<Transaction, 'id'>) => {
+  return await addDoc(collection(db, TRANSACTIONS_COLLECTION), transaction);
+};
+
+export const deleteTransaction = async (id: string) => {
+  return await deleteDoc(doc(db, TRANSACTIONS_COLLECTION, id));
 };
 
 // Config API
@@ -128,6 +161,13 @@ export const addCoupon = async (coupon: Omit<Coupon, 'id' | 'createdAt'>) => {
   return await addDoc(collection(db, COUPONS_COLLECTION), {
     ...coupon,
     createdAt: Date.now()
+  });
+};
+
+export const incrementCouponUsage = async (couponId: string) => {
+  const couponRef = doc(db, COUPONS_COLLECTION, couponId);
+  return await updateDoc(couponRef, {
+    usedCount: increment(1)
   });
 };
 

@@ -36,8 +36,18 @@ export interface Product {
   category: string;
   tags?: string[];
   optionsGroups?: OptionGroup[];
+  availableDays?: number[]; // [0, 1, 2, 3, 4, 5, 6] onde 0 é domingo
   createdAt: number;
   restaurantId: string;
+}
+
+export interface Transaction {
+  id?: string;
+  description: string;
+  amount: number;
+  type: 'income' | 'expense';
+  category: string;
+  date: number;
 }
 
 export interface SelectedOption {
@@ -87,6 +97,9 @@ export interface Coupon {
   id?: string;
   code: string;
   discountPercentage: number;
+  minOrderValue: number;
+  availableQuantity: number;
+  usedCount: number;
   active: boolean;
   createdAt: number;
 }

@@ -9,10 +9,19 @@ import {
   Package, ShoppingBag, Plus, Edit2, Trash2, Save, X, 
   LayoutDashboard, ToggleLeft as Toggle, Image as ImageIcon,
   Tag as TagIcon, ListFilter, Database, Sparkles, Eye, LogOut, Settings2, PlusCircle, ExternalLink, Minus,
-  Camera, Copy, Zap, Info, ChevronRight, Wand2, Utensils
+  Camera, Copy, Zap, Info, ChevronRight, Wand2, Utensils, Check, Calendar, ClipboardList, PieChart
 } from 'lucide-react';
 
-// Modelos de Pratos Prontos (Quick Fill)
+const WEEK_DAYS = [
+  { label: 'Dom', value: 0 },
+  { label: 'Seg', value: 1 },
+  { label: 'Ter', value: 2 },
+  { label: 'Qua', value: 3 },
+  { label: 'Qui', value: 4 },
+  { label: 'Sex', value: 5 },
+  { label: 'Sáb', value: 6 }
+];
+
 const DISH_TEMPLATES = [
   {
     label: 'Marmita Comercial',
@@ -46,7 +55,6 @@ const DISH_TEMPLATES = [
   }
 ];
 
-// Presets de Grupos de Opções
 const PRESET_GROUPS = [
   {
     label: 'Base (Arroz/Feijão)',
@@ -131,6 +139,7 @@ const AdminProducts: React.FC = () => {
     imageUrl: '',
     category: 'Marmitas',
     active: true,
+    availableDays: [0, 1, 2, 3, 4, 5, 6],
     optionsGroups: [] as OptionGroup[]
   });
 
@@ -159,13 +168,33 @@ const AdminProducts: React.FC = () => {
         imageUrl: product.imageUrl,
         category: product.category || 'Marmitas',
         active: product.active,
+        availableDays: product.availableDays || [0, 1, 2, 3, 4, 5, 6],
         optionsGroups: product.optionsGroups || []
       });
     } else {
       setEditingProduct(null);
-      setFormData({ name: '', description: '', price: '', imageUrl: '', category: 'Marmitas', active: true, optionsGroups: [] });
+      setFormData({ 
+        name: '', 
+        description: '', 
+        price: '', 
+        imageUrl: '', 
+        category: 'Marmitas', 
+        active: true, 
+        availableDays: [0, 1, 2, 3, 4, 5, 6],
+        optionsGroups: [] 
+      });
     }
     setIsModalOpen(true);
+  };
+
+  const toggleDay = (dayValue: number) => {
+    setFormData(prev => {
+      const days = prev.availableDays || [];
+      if (days.includes(dayValue)) {
+        return { ...prev, availableDays: days.filter(d => d !== dayValue) };
+      }
+      return { ...prev, availableDays: [...days, dayValue] };
+    });
   };
 
   const applyTemplate = (template: typeof DISH_TEMPLATES[0]) => {
@@ -204,6 +233,7 @@ const AdminProducts: React.FC = () => {
       imageUrl: product.imageUrl,
       category: product.category || 'Marmitas',
       active: product.active,
+      availableDays: product.availableDays || [0, 1, 2, 3, 4, 5, 6],
       optionsGroups: duplicatedGroups
     });
     setIsModalOpen(true);
@@ -287,8 +317,14 @@ const AdminProducts: React.FC = () => {
           <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
             <LayoutDashboard size={20} /> Dashboard
           </Link>
+          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
+            <ClipboardList size={20} /> Pedidos
+          </Link>
           <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg shadow-orange-500/20">
-            <ShoppingBag size={20} /> Itens & Cardápio
+            <ShoppingBag size={20} /> Produtos
+          </Link>
+          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
+            <PieChart size={20} /> Financeiro
           </Link>
           <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
             <Settings2 size={20} /> Configurações
@@ -309,7 +345,7 @@ const AdminProducts: React.FC = () => {
         <header className="bg-white p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
           <div>
             <h2 className="text-3xl font-black text-slate-900">Catálogo</h2>
-            <p className="text-slate-500 font-medium">Gerencie marmitas, bebidas e doces</p>
+            <p className="text-slate-500 font-medium">Gerencie o que seus clientes podem comprar</p>
           </div>
           <button 
             onClick={() => handleOpenModal()}
@@ -353,6 +389,12 @@ const AdminProducts: React.FC = () => {
                 <div key={product.id} className="bg-white rounded-3xl overflow-hidden border border-slate-100 shadow-sm hover:shadow-xl transition-all group">
                   <div className="h-44 relative">
                     <img src={product.imageUrl || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?q=80&w=400&auto=format&fit=crop'} alt={product.name} className={`w-full h-full object-cover transition-all duration-500 group-hover:scale-110 ${!product.active && 'grayscale brightness-50'}`} />
+                    <button 
+                      onClick={async () => { await updateProduct(product.id!, { active: !product.active }); loadProducts(); }}
+                      className={`absolute top-4 left-4 px-3 py-1.5 rounded-xl font-black text-[10px] uppercase shadow-lg transition-all ${product.active ? 'bg-green-500 text-white' : 'bg-slate-700 text-white opacity-90'}`}
+                    >
+                      {product.active ? 'No Cardápio' : 'Fora do Ar'}
+                    </button>
                     {product.optionsGroups && product.optionsGroups.length > 0 && (
                       <div className="absolute top-4 right-4 bg-orange-500 text-white p-2 rounded-xl shadow-lg">
                         <Settings2 size={16} />
@@ -371,9 +413,6 @@ const AdminProducts: React.FC = () => {
                         <button onClick={() => handleDuplicateProduct(product)} className="p-2.5 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-xl transition-all"><Copy size={16} /></button>
                         <button onClick={async () => { if(confirm('Excluir este item?')) { await deleteProduct(product.id!); loadProducts(); } }} className="p-2.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all"><Trash2 size={16} /></button>
                       </div>
-                      <button onClick={async () => { await updateProduct(product.id!, { active: !product.active }); loadProducts(); }} className={`text-[10px] font-black px-4 py-2 rounded-xl transition-all ${product.active ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'}`}>
-                        {product.active ? 'ATIVO' : 'PAUSADO'}
-                      </button>
                     </div>
                   </div>
                 </div>
@@ -391,9 +430,21 @@ const AdminProducts: React.FC = () => {
             <div className="p-8 md:p-10 border-b border-slate-100 flex justify-between items-center shrink-0">
                 <div>
                     <h2 className="text-3xl font-black text-slate-900">{editingProduct ? 'Editar' : 'Novo'} Item</h2>
-                    <p className="text-slate-400 font-bold text-sm">Preencha os dados ou use os modelos rápidos.</p>
+                    <p className="text-slate-400 font-bold text-sm">Configure a visibilidade e os detalhes do seu item.</p>
                 </div>
-                <button onClick={() => setIsModalOpen(false)} className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all"><X size={20} /></button>
+                <div className="flex items-center gap-6">
+                   <label className="flex items-center gap-3 cursor-pointer group">
+                      <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest group-hover:text-slate-900 transition-colors">Visível no Cardápio</span>
+                      <button 
+                        type="button" 
+                        onClick={() => setFormData({...formData, active: !formData.active})}
+                        className={`w-14 h-8 rounded-full relative transition-all flex items-center px-1 ${formData.active ? 'bg-green-500' : 'bg-slate-200'}`}
+                      >
+                         <div className={`w-6 h-6 bg-white rounded-full shadow-md transition-all ${formData.active ? 'translate-x-6' : 'translate-x-0'}`}></div>
+                      </button>
+                   </label>
+                   <button onClick={() => setIsModalOpen(false)} className="p-3 bg-slate-50 rounded-2xl hover:bg-slate-100 transition-all"><X size={20} /></button>
+                </div>
             </div>
 
             <div className="flex-1 overflow-y-auto p-8 md:p-10 no-scrollbar">
@@ -402,7 +453,7 @@ const AdminProducts: React.FC = () => {
                 <div className="space-y-4">
                    <div className="flex items-center gap-2 text-orange-500 mb-4">
                       <Wand2 size={20} />
-                      <h3 className="font-black uppercase tracking-widest text-xs">Modelos de Pratos Prontos</h3>
+                      <h3 className="font-black uppercase tracking-widest text-xs">Modelos Rápidos</h3>
                    </div>
                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                       {DISH_TEMPLATES.map((tpl, i) => (
@@ -427,6 +478,35 @@ const AdminProducts: React.FC = () => {
                     <label className="block text-xs font-black text-slate-400 uppercase mb-2">Descrição Curta</label>
                     <textarea required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-orange-500 font-bold outline-none h-24" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Descreva os ingredientes principais..." />
                   </div>
+
+                  {/* NOVO: Disponibilidade por Dia da Semana */}
+                  <div className="md:col-span-2 p-8 bg-slate-50 rounded-[2.5rem] border border-slate-200">
+                    <div className="flex items-center gap-3 mb-6 text-slate-700">
+                      <Calendar size={20} className="text-orange-500" />
+                      <h3 className="font-black uppercase tracking-widest text-xs">Disponibilidade Semanal</h3>
+                    </div>
+                    <div className="flex flex-wrap gap-3">
+                      {WEEK_DAYS.map(day => (
+                        <button
+                          key={day.value}
+                          type="button"
+                          onClick={() => toggleDay(day.value)}
+                          className={`w-14 h-14 rounded-2xl font-black text-xs transition-all border-2 flex flex-col items-center justify-center gap-1 ${
+                            formData.availableDays.includes(day.value) 
+                            ? 'bg-slate-900 border-slate-900 text-white shadow-lg' 
+                            : 'bg-white border-slate-100 text-slate-400 hover:border-slate-300'
+                          }`}
+                        >
+                          {day.label}
+                          {formData.availableDays.includes(day.value) && <Check size={12} className="text-orange-500" />}
+                        </button>
+                      ))}
+                    </div>
+                    <p className="mt-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                      O item aparecerá automaticamente no cardápio apenas nos dias selecionados acima.
+                    </p>
+                  </div>
+
                   <div className="space-y-4">
                     <label className="block text-xs font-black text-slate-400 uppercase mb-2">Link da Imagem</label>
                     <div className="flex flex-col gap-4">
@@ -458,7 +538,7 @@ const AdminProducts: React.FC = () => {
                   <div className="bg-orange-50 p-8 rounded-[2.5rem] border border-orange-100">
                     <div className="flex items-center gap-3 mb-6 text-orange-600">
                       <Zap size={20} className="fill-orange-600" />
-                      <h3 className="font-black uppercase tracking-widest text-xs">Presets de Itens (Arroz, Feijão, Misturas...)</h3>
+                      <h3 className="font-black uppercase tracking-widest text-xs">Presets Rápidos de Grupos</h3>
                     </div>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       {PRESET_GROUPS.map((preset, idx) => (
@@ -531,7 +611,7 @@ const AdminProducts: React.FC = () => {
                <div className="flex gap-4 max-w-xl mx-auto">
                   <button type="button" onClick={() => setIsModalOpen(false)} className="flex-1 py-5 bg-white text-slate-500 font-black rounded-2xl border border-slate-200 hover:bg-slate-50 transition-all">Cancelar</button>
                   <button type="button" onClick={handleSubmit} className="flex-1 py-5 bg-orange-500 text-white font-black rounded-2xl shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all active:scale-95 flex items-center justify-center gap-2">
-                    <Save size={20} /> Salvar Alterações
+                    <Save size={20} /> Salvar Item
                   </button>
                </div>
             </div>

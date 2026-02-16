@@ -1,68 +1,83 @@
 
-import React, { useState, useEffect } from 'react';
-import { subscribeToOrders, updateOrderStatus } from '../services/database';
-import { Order, OrderStatus } from '../types';
+import React, { useState, useEffect, useMemo } from 'react';
+import { subscribeToOrders, getAllProducts, getOrdersByPeriod, getTransactionsByPeriod } from '../services/database';
+import { Order, OrderStatus, Product, Transaction } from '../types';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase-config';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  LogOut, 
-  Package, 
-  ChevronRight, 
-  Clock, 
-  Truck, 
-  CheckCircle2, 
-  LayoutDashboard, 
-  ShoppingBag,
-  ExternalLink,
-  Phone,
-  MessageSquare,
-  Eye
+  LogOut, Package, Clock, Truck, LayoutDashboard, ShoppingBag, 
+  ExternalLink, Phone, Eye, Settings2, TrendingUp, DollarSign, 
+  Users, Activity, Wallet, PieChart, ArrowUpRight, ArrowDownRight,
+  ClipboardList, ChevronRight
 } from 'lucide-react';
 
 const AdminDashboard: React.FC = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
   const navigate = useNavigate();
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [monthTransactions, setMonthTransactions] = useState<Transaction[]>([]);
+  const [activeProductsCount, setActiveProductsCount] = useState(0);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubscribe = subscribeToOrders((newOrders) => {
+    const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
+    const endOfDay = new Date().setHours(23, 59, 59, 999);
+
+    const unsubscribeOrders = subscribeToOrders((newOrders) => {
       setOrders(newOrders);
     });
-    return () => unsubscribe();
+
+    const loadMetrics = async () => {
+      try {
+        const [allProds, trans] = await Promise.all([
+          getAllProducts(),
+          getTransactionsByPeriod(startOfMonth, endOfDay)
+        ]);
+        setActiveProductsCount(allProds.filter(p => p.active).length);
+        setMonthTransactions(trans);
+      } catch (err) {
+        console.error(err);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    loadMetrics();
+    return () => unsubscribeOrders();
   }, []);
 
-  const handleStatusChange = async (order: Order, status: OrderStatus) => {
-    try {
-      await updateOrderStatus(order.id!, status);
-      
-      // Lógica de Notificação via WhatsApp
-      const cleanPhone = order.phone.replace(/\D/g, '');
-      let message = '';
+  // Métricas de Hoje
+  const todayStats = useMemo(() => {
+    const today = new Date().setHours(0, 0, 0, 0);
+    const todayOrders = orders.filter(o => o.createdAt >= today && o.status === OrderStatus.FINISHED);
+    const revenue = todayOrders.reduce((acc, curr) => acc + curr.total, 0);
+    return {
+      revenue,
+      count: todayOrders.length,
+      avgTicket: todayOrders.length > 0 ? revenue / todayOrders.length : 0
+    };
+  }, [orders]);
 
-      if (status === OrderStatus.PREPARING) {
-        message = `Olá *${order.customerName}*! 👋\n\nPassando para avisar que seu pedido da *Marmita Express* já entrou em preparo aqui na cozinha e logo sairá para entrega! 🍱🔥`;
-      } else if (status === OrderStatus.DELIVERING) {
-        message = `Olá *${order.customerName}*! 👋\n\nÓtimas notícias: seu pedido acabou de *sair para entrega*! O entregador já está a caminho. 🛵💨`;
-      }
+  // Saúde Financeira Mensal (Pedidos Finalizados + Entradas - Despesas)
+  const monthlyHealth = useMemo(() => {
+    const finishedOrders = orders.filter(o => o.status === OrderStatus.FINISHED);
+    const orderRevenue = finishedOrders.reduce((acc, curr) => acc + curr.total, 0);
+    const manualIncome = monthTransactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
+    const expenses = monthTransactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
+    
+    const totalIncome = orderRevenue + manualIncome;
+    const profit = totalIncome - expenses;
 
-      if (message) {
-        const whatsappUrl = `https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`;
-        window.open(whatsappUrl, '_blank');
-      }
-    } catch (err) {
-      alert('Erro ao atualizar status');
-    }
-  };
+    return { totalIncome, expenses, profit };
+  }, [orders, monthTransactions]);
 
-  const getStatusColor = (status: OrderStatus) => {
-    switch (status) {
-      case OrderStatus.RECEIVED: return 'bg-blue-100 text-blue-700 border-blue-200';
-      case OrderStatus.PREPARING: return 'bg-orange-100 text-orange-700 border-orange-200';
-      case OrderStatus.DELIVERING: return 'bg-purple-100 text-purple-700 border-purple-200';
-      case OrderStatus.FINISHED: return 'bg-green-100 text-green-700 border-green-200';
-      default: return 'bg-slate-100 text-slate-700';
-    }
-  };
+  const activeOrdersCount = orders.filter(o => o.status !== OrderStatus.FINISHED).length;
+
+  if (loading) return (
+    <div className="flex items-center justify-center h-screen bg-slate-50">
+      <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -75,11 +90,21 @@ const AdminDashboard: React.FC = () => {
         </div>
         
         <nav className="flex-1 px-4 py-8 space-y-2">
-          <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl bg-slate-800 text-white font-black shadow-lg">
+          <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg">
             <LayoutDashboard size={20} /> Dashboard
+          </Link>
+          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
+            <ClipboardList size={20} /> Pedidos 
+            {activeOrdersCount > 0 && <span className="ml-auto bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full">{activeOrdersCount}</span>}
           </Link>
           <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
             <ShoppingBag size={20} /> Produtos
+          </Link>
+          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
+            <PieChart size={20} /> Financeiro
+          </Link>
+          <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
+            <Settings2 size={20} /> Configurações
           </Link>
           <Link to="/" className="flex items-center gap-3 p-4 rounded-2xl text-orange-400 hover:bg-orange-500/10 transition-all font-bold mt-10">
             <Eye size={20} /> Ver Loja
@@ -94,117 +119,140 @@ const AdminDashboard: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        <header className="bg-white p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
+      <main className="flex-1 p-8 overflow-y-auto no-scrollbar">
+        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h2 className="text-3xl font-black text-slate-900">Painel de Pedidos</h2>
-            <p className="text-slate-500 font-medium">Acompanhe a produção em tempo real</p>
+            <h2 className="text-3xl font-black text-slate-900">Saúde do Negócio</h2>
+            <p className="text-slate-500 font-medium">Visão geral de hoje e desempenho financeiro</p>
           </div>
-          <div className="flex items-center gap-4">
-             <div className="bg-slate-50 px-6 py-3 rounded-2xl text-sm font-black border border-slate-200 text-slate-600">
-               {orders.filter(o => o.status !== OrderStatus.FINISHED).length} ATIVOS
-             </div>
-             <button onClick={() => navigate('/')} className="p-3 bg-orange-50 text-orange-500 rounded-2xl hover:bg-orange-100 transition-all" title="Ver Cardápio Público">
-                <ExternalLink size={20} />
-             </button>
-          </div>
+          <button onClick={() => navigate('/admin/orders')} className="bg-slate-900 text-white px-8 py-4 rounded-2xl font-black shadow-xl hover:bg-black transition-all flex items-center gap-3">
+             <ClipboardList size={20} /> Gerenciar Pedidos
+          </button>
         </header>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-6">
-          {orders.length === 0 ? (
-            <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-slate-200">
-              <Package size={64} className="mx-auto mb-4 text-slate-200" />
-              <p className="text-slate-500 text-lg font-bold">Nenhum pedido hoje ainda.</p>
-            </div>
-          ) : (
-            orders.map((order) => (
-              <div key={order.id} className="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100 hover:shadow-xl transition-all">
-                <div className="flex flex-col lg:flex-row justify-between gap-10">
-                  <div className="flex-1 space-y-6">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest block mb-1">Cliente</span>
-                        <h3 className="text-2xl font-black text-slate-900">{order.customerName}</h3>
-                        <div className="flex items-center gap-4 mt-1">
-                           <p className="text-slate-400 text-xs font-bold flex items-center gap-1"><Clock size={12} /> {new Date(order.createdAt).toLocaleTimeString()}</p>
-                           <a href={`https://wa.me/55${order.phone.replace(/\D/g,'')}`} target="_blank" className="text-green-600 text-xs font-bold flex items-center gap-1 hover:underline"><Phone size={12} /> WhatsApp</a>
-                        </div>
-                      </div>
-                      <span className={`px-4 py-2 rounded-xl text-[10px] font-black border ${getStatusColor(order.status)} uppercase tracking-widest`}>
-                        {order.status}
-                      </span>
-                    </div>
+        {/* Cards de Métricas Rápidas */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group hover:shadow-xl transition-all">
+             <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 mb-6 group-hover:scale-110 transition-transform">
+                <TrendingUp size={24} />
+             </div>
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Vendas de Hoje</p>
+             <h3 className="text-3xl font-black text-slate-900">R$ {todayStats.revenue.toFixed(2)}</h3>
+             <p className="text-[10px] text-orange-500 font-bold mt-2">{todayStats.count} marmitas finalizadas</p>
+          </div>
 
-                    <div className="bg-slate-50 p-5 rounded-[2rem] border border-slate-100 flex items-start gap-3">
-                        <Truck size={20} className="text-slate-400 mt-1" />
-                        <div>
-                          <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Endereço de Entrega</p>
-                          <p className="text-slate-700 font-bold">{order.address}</p>
-                        </div>
-                    </div>
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group hover:shadow-xl transition-all">
+             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500 mb-6 group-hover:scale-110 transition-transform">
+                <Activity size={24} />
+             </div>
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Ticket Médio</p>
+             <h3 className="text-3xl font-black text-slate-900">R$ {todayStats.avgTicket.toFixed(2)}</h3>
+             <p className="text-[10px] text-blue-500 font-bold mt-2">Média por pedido</p>
+          </div>
 
-                    <div className="space-y-4">
-                      <h4 className="text-sm font-black text-slate-900 flex items-center gap-2 uppercase tracking-widest">
-                        <ShoppingBag size={16} className="text-orange-500" /> Itens do Pedido
-                      </h4>
-                      <div className="grid grid-cols-1 gap-4">
-                        {order.items.map((item, idx) => (
-                          <div key={idx} className="bg-slate-50/50 p-6 rounded-[2rem] border border-slate-100">
-                            <div className="flex justify-between items-start mb-3">
-                              <span className="font-black text-slate-900">{item.quantity}x {item.name}</span>
-                              <span className="font-black text-slate-400 text-sm">R$ {(item.price * item.quantity).toFixed(2)}</span>
-                            </div>
-                            
-                            {item.selectedOptions && item.selectedOptions.length > 0 && (
-                              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-4 pt-4 border-t border-slate-200/50">
-                                {item.selectedOptions.map(opt => (
-                                  <div key={opt.groupName}>
-                                    <p className="text-[10px] font-black text-orange-500 uppercase mb-1">{opt.groupName}</p>
-                                    <p className="text-sm font-bold text-slate-700">{opt.items.join(' • ')}</p>
-                                  </div>
-                                ))}
-                              </div>
-                            )}
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group hover:shadow-xl transition-all">
+             <div className="w-12 h-12 bg-purple-50 rounded-2xl flex items-center justify-center text-purple-500 mb-6 group-hover:scale-110 transition-transform">
+                <Wallet size={24} />
+             </div>
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Lucro Estimado (Mês)</p>
+             <h3 className={`text-3xl font-black ${monthlyHealth.profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                R$ {monthlyHealth.profit.toFixed(2)}
+             </h3>
+             <p className="text-[10px] text-slate-400 font-bold mt-2">Saldo mensal real</p>
+          </div>
 
-                            {item.observation && (
-                              <div className="mt-4 p-3 bg-orange-50 border border-orange-100 rounded-xl flex items-start gap-2">
-                                <MessageSquare size={14} className="text-orange-500 mt-0.5" />
-                                <p className="text-xs font-bold text-orange-800 italic">"{item.observation}"</p>
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm group hover:shadow-xl transition-all">
+             <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-500 mb-6 group-hover:scale-110 transition-transform">
+                <ShoppingBag size={24} />
+             </div>
+             <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Cardápio Ativo</p>
+             <h3 className="text-3xl font-black text-slate-900">{activeProductsCount} Itens</h3>
+             <p className="text-[10px] text-green-500 font-bold mt-2">Itens disponíveis na loja</p>
+          </div>
+        </div>
 
-                    <div className="flex justify-between items-center p-6 bg-slate-900 rounded-[2rem] text-white">
-                        <div>
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Pagamento</p>
-                          <p className="font-bold text-sm">{order.paymentMethod}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-[10px] font-black text-slate-400 uppercase">Total do Pedido</p>
-                          <p className="text-2xl font-black text-orange-400">R$ {order.total.toFixed(2)}</p>
-                        </div>
-                    </div>
-                  </div>
-
-                  <div className="lg:w-72 space-y-3">
-                    <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Ações de Produção</p>
-                    <button onClick={() => handleStatusChange(order, OrderStatus.PREPARING)} className="w-full flex items-center justify-between px-6 py-5 bg-orange-50 text-orange-600 rounded-2xl font-black hover:bg-orange-100 transition-all border border-orange-100 group">
-                      <span>Começar Preparo</span> <Clock size={20} className="group-hover:rotate-12 transition-transform" />
-                    </button>
-                    <button onClick={() => handleStatusChange(order, OrderStatus.DELIVERING)} className="w-full flex items-center justify-between px-6 py-5 bg-purple-50 text-purple-600 rounded-2xl font-black hover:bg-purple-100 transition-all border border-purple-100 group">
-                      <span>Saiu p/ Entrega</span> <Truck size={20} className="group-hover:translate-x-1 transition-transform" />
-                    </button>
-                    <button onClick={() => handleStatusChange(order, OrderStatus.FINISHED)} className="w-full flex items-center justify-between px-6 py-5 bg-green-50 text-green-600 rounded-2xl font-black hover:bg-green-100 transition-all border border-green-100 group">
-                      <span>Finalizar Pedido</span> <CheckCircle2 size={20} />
-                    </button>
-                  </div>
+        {/* Seção Central - Saúde Financeira vs Operação */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-10">
+          {/* Gráfico/Resumo Financeiro */}
+          <section className="lg:col-span-2 bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm">
+             <div className="flex items-center justify-between mb-8">
+                <h3 className="text-xl font-black text-slate-900">Saúde Financeira do Mês</h3>
+                <Link to="/admin/finances" className="text-orange-500 font-black text-xs uppercase tracking-widest hover:underline">Ver Detalhes</Link>
+             </div>
+             
+             <div className="space-y-8">
+                <div className="flex items-center justify-between">
+                   <div className="space-y-1">
+                      <p className="text-xs font-black text-slate-400 uppercase tracking-widest">Receitas (Bruto)</p>
+                      <h4 className="text-4xl font-black text-slate-900">R$ {monthlyHealth.totalIncome.toFixed(2)}</h4>
+                   </div>
+                   <ArrowUpRight size={48} className="text-green-500 bg-green-50 p-3 rounded-2xl" />
                 </div>
-              </div>
-            ))
-          )}
+
+                <div className="w-full h-4 bg-slate-100 rounded-full overflow-hidden flex">
+                   <div 
+                    className="h-full bg-green-500 transition-all duration-1000" 
+                    style={{ width: `${(monthlyHealth.profit / (monthlyHealth.totalIncome || 1)) * 100}%` }}
+                   ></div>
+                   <div 
+                    className="h-full bg-red-500 transition-all duration-1000" 
+                    style={{ width: `${(monthlyHealth.expenses / (monthlyHealth.totalIncome || 1)) * 100}%` }}
+                   ></div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                   <div className="p-6 bg-red-50 rounded-[2rem] border border-red-100">
+                      <p className="text-[10px] font-black text-red-400 uppercase tracking-widest mb-1">Despesas</p>
+                      <p className="text-xl font-black text-red-600">R$ {monthlyHealth.expenses.toFixed(2)}</p>
+                   </div>
+                   <div className="p-6 bg-green-50 rounded-[2rem] border border-green-100">
+                      <p className="text-[10px] font-black text-green-400 uppercase tracking-widest mb-1">Lucro Líquido</p>
+                      <p className="text-xl font-black text-green-600">R$ {monthlyHealth.profit.toFixed(2)}</p>
+                   </div>
+                </div>
+             </div>
+          </section>
+
+          {/* Status da Operação */}
+          <section className="bg-slate-900 rounded-[3rem] p-10 text-white shadow-2xl relative overflow-hidden">
+             <div className="absolute top-0 right-0 w-32 h-32 bg-orange-500/10 rounded-full -mr-10 -mt-10 blur-3xl"></div>
+             
+             <h3 className="text-xl font-black mb-8 relative z-10">Operação Agora</h3>
+             
+             <div className="space-y-6 relative z-10">
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                   <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
+                      <span className="text-sm font-bold">Recebidos</span>
+                   </div>
+                   <span className="font-black text-lg">{orders.filter(o => o.status === OrderStatus.RECEIVED).length}</span>
+                </div>
+                
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                   <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-orange-500 rounded-full"></div>
+                      <span className="text-sm font-bold">Em Preparo</span>
+                   </div>
+                   <span className="font-black text-lg">{orders.filter(o => o.status === OrderStatus.PREPARING).length}</span>
+                </div>
+
+                <div className="flex items-center justify-between p-4 bg-white/5 rounded-2xl border border-white/10">
+                   <div className="flex items-center gap-3">
+                      <div className="w-2 h-2 bg-purple-500 rounded-full"></div>
+                      <span className="text-sm font-bold">Em Entrega</span>
+                   </div>
+                   <span className="font-black text-lg">{orders.filter(o => o.status === OrderStatus.DELIVERING).length}</span>
+                </div>
+
+                <button 
+                  onClick={() => navigate('/admin/orders')}
+                  className="w-full mt-6 py-5 bg-orange-500 text-white font-black rounded-2xl shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all flex items-center justify-center gap-2"
+                >
+                  {/* Fixed error on line 251 by adding missing ChevronRight import */}
+                  Ver Pedidos <ChevronRight size={18} />
+                </button>
+             </div>
+          </section>
         </div>
       </main>
     </div>
