@@ -15,6 +15,7 @@ export enum PaymentMethod {
 export interface OptionItem {
   name: string;
   price?: number;
+  imageUrl?: string;
 }
 
 export interface OptionGroup {
@@ -62,10 +63,13 @@ export interface OrderItem {
   price: number;
   selectedOptions?: SelectedOption[];
   observation?: string;
+  restaurantId?: string;
 }
 
 export interface Order {
   id?: string;
+  userId?: string;
+  guestId?: string;
   customerName: string;
   phone: string;
   address: string;

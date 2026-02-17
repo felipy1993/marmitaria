@@ -8,13 +8,14 @@ import { useNavigate, Link } from 'react-router-dom';
 import { 
   LogOut, Package, Clock, Truck, CheckCircle2, LayoutDashboard, ShoppingBag, 
   Settings2, ClipboardList, PieChart, Eye, Phone, MessageSquare, ExternalLink,
-  Archive, RotateCcw, Search, Filter
+  Archive, RotateCcw, Search, Filter, Printer
 } from 'lucide-react';
 
 const AdminOrders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
   const [activeTab, setActiveTab] = useState<'active' | 'finished'>('active');
   const [searchTerm, setSearchTerm] = useState('');
+  const [orderToPrint, setOrderToPrint] = useState<Order | null>(null);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -40,6 +41,13 @@ const AdminOrders: React.FC = () => {
     } catch (err) {
       alert('Erro ao atualizar status');
     }
+  };
+
+  const handlePrintReceipt = (order: Order) => {
+    setOrderToPrint(order);
+    setTimeout(() => {
+      window.print();
+    }, 100);
   };
 
   const filteredOrders = orders.filter(order => {
@@ -199,34 +207,131 @@ const AdminOrders: React.FC = () => {
                     </div>
                   </div>
 
-                  {activeTab === 'active' && (
-                    <div className="lg:w-72 space-y-3">
-                      <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Ações</p>
-                      <button onClick={() => handleStatusChange(order, OrderStatus.PREPARING)} className="w-full flex items-center justify-between px-6 py-4 bg-orange-50 text-orange-600 rounded-2xl font-black hover:bg-orange-100 border border-orange-100 transition-all">
-                        <span>Preparo</span> <Clock size={20} />
-                      </button>
-                      <button onClick={() => handleStatusChange(order, OrderStatus.DELIVERING)} className="w-full flex items-center justify-between px-6 py-4 bg-purple-50 text-purple-600 rounded-2xl font-black hover:bg-purple-100 border border-purple-100 transition-all">
-                        <span>Saiu p/ Entrega</span> <Truck size={20} />
-                      </button>
-                      <button onClick={() => handleStatusChange(order, OrderStatus.FINISHED)} className="w-full flex items-center justify-between px-6 py-4 bg-green-50 text-green-600 rounded-2xl font-black hover:bg-green-100 border border-green-100 transition-all">
-                        <span>Finalizar</span> <CheckCircle2 size={20} />
-                      </button>
-                    </div>
-                  )}
-
-                  {activeTab === 'finished' && (
-                    <div className="lg:w-72">
-                      <button onClick={() => handleStatusChange(order, OrderStatus.RECEIVED)} className="w-full flex items-center justify-between px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 border border-slate-200 transition-all">
+                   {activeTab === 'active' ? (
+                     <div className="lg:w-72 space-y-3">
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Ações</p>
+                       <button onClick={() => handlePrintReceipt(order)} className="w-full flex items-center justify-between px-6 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black border border-slate-900 transition-all shadow-lg shadow-slate-900/10">
+                         <span>Imprimir Recibo</span> <Printer size={20} />
+                       </button>
+                       <button onClick={() => handleStatusChange(order, OrderStatus.PREPARING)} className="w-full flex items-center justify-between px-6 py-4 bg-orange-50 text-orange-600 rounded-2xl font-black hover:bg-orange-100 border border-orange-100 transition-all">
+                         <span>Preparo</span> <Clock size={20} />
+                       </button>
+                       <button onClick={() => handleStatusChange(order, OrderStatus.DELIVERING)} className="w-full flex items-center justify-between px-6 py-4 bg-purple-50 text-purple-600 rounded-2xl font-black hover:bg-purple-100 border border-purple-100 transition-all">
+                         <span>Saiu p/ Entrega</span> <Truck size={20} />
+                       </button>
+                       <button onClick={() => handleStatusChange(order, OrderStatus.FINISHED)} className="w-full flex items-center justify-between px-6 py-4 bg-green-50 text-green-600 rounded-2xl font-black hover:bg-green-100 border border-green-100 transition-all">
+                         <span>Finalizar</span> <CheckCircle2 size={20} />
+                       </button>
+                     </div>
+                   ) : (
+                     <div className="lg:w-72 space-y-3">
+                       <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-2">Ações</p>
+                       <button onClick={() => handlePrintReceipt(order)} className="w-full flex items-center justify-between px-6 py-4 bg-slate-900 text-white rounded-2xl font-black hover:bg-black border border-slate-900 transition-all">
+                         <span>Imprimir Recibo</span> <Printer size={20} />
+                       </button>
+                       <button onClick={() => handleStatusChange(order, OrderStatus.RECEIVED)} className="w-full flex items-center justify-between px-6 py-4 bg-slate-100 text-slate-600 rounded-2xl font-black hover:bg-slate-200 border border-slate-200 transition-all">
                          <span>Reabrir Pedido</span> <RotateCcw size={20} />
-                      </button>
-                    </div>
-                  )}
+                       </button>
+                     </div>
+                   )}
                 </div>
               </div>
             ))
           )}
         </div>
       </main>
+
+       <style>{`
+        @media print {
+          @page { margin: 0; }
+          body * { visibility: hidden; }
+          .print-receipt-admin, .print-receipt-admin * { 
+            visibility: visible; 
+            display: block !important;
+          }
+          .print-receipt-admin { 
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 80mm;
+            padding: 5mm;
+            font-family: 'Courier New', Courier, monospace;
+            background: white;
+          }
+          .no-print { display: none !important; }
+        }
+      `}</style>
+
+      {/* Recibo Invisível (Somente Print) */}
+      <div className="print-receipt-admin hidden print:block">
+        {orderToPrint && (
+          <div className="print-item">
+            <div className="text-center font-bold text-lg mb-1">MARMITA EXPRESS</div>
+            <div className="text-center text-[10px] mb-4 uppercase tracking-widest">Recibo do Cliente</div>
+            
+            <div className="text-[10px] space-y-0.5 mb-4">
+              <p><strong>PEDIDO:</strong> #{orderToPrint.id?.slice(-6)}</p>
+              <p><strong>DATA:</strong> {new Date(orderToPrint.createdAt).toLocaleString('pt-BR')}</p>
+              <p><strong>CLIENTE:</strong> {orderToPrint.customerName}</p>
+              <p><strong>CONTATO:</strong> {orderToPrint.phone}</p>
+            </div>
+
+            <div className="border-t border-dashed border-black my-2"></div>
+            
+            <div className="text-[10px] space-y-2">
+              {orderToPrint.items.map((item, idx: number) => (
+                <div key={idx} className="space-y-0.5">
+                  <div className="flex justify-between font-bold">
+                    <span>{item.quantity}x {item.name}</span>
+                    <span>R$ {(item.price * item.quantity).toFixed(2)}</span>
+                  </div>
+                  {item.selectedOptions?.map((opt: any) => (
+                    <div key={opt.groupName} className="text-[8px] pl-2 font-medium">
+                      + {opt.groupName}: {opt.items.join(', ')}
+                    </div>
+                  ))}
+                  {item.observation && (
+                    <div className="text-[8px] pl-2 italic">Obs: {item.observation}</div>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="border-t border-dashed border-black my-2"></div>
+
+            <div className="text-[10px] space-y-1">
+              <div className="flex justify-between">
+                <span>Subtotal:</span>
+                <span>R$ {orderToPrint.subtotal.toFixed(2)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span>Taxa de Entrega:</span>
+                <span>R$ {orderToPrint.deliveryFee.toFixed(2)}</span>
+              </div>
+              {orderToPrint.discount && orderToPrint.discount > 0 && (
+                <div className="flex justify-between">
+                  <span>Desconto:</span>
+                  <span>- R$ {orderToPrint.discount.toFixed(2)}</span>
+                </div>
+              )}
+              <div className="flex justify-between font-bold text-sm pt-1 border-t border-black/10">
+                <span>TOTAL:</span>
+                <span>R$ {orderToPrint.total.toFixed(2)}</span>
+              </div>
+            </div>
+
+            <div className="mt-4 text-[10px] pt-4 border-t border-dashed border-black">
+              <p className="font-bold mb-1 uppercase text-[8px]">Endereço de Entrega:</p>
+              <p className="leading-tight">{orderToPrint.address}</p>
+            </div>
+
+            <div className="mt-4 text-center text-[8px] font-bold">
+              <p>PAGAMENTO: {orderToPrint.paymentMethod.toUpperCase()}</p>
+              <p className="mt-2">Marmita Express - Sabores que Conectam</p>
+            </div>
+          </div>
+        )}
+      </div>
     </div>
   );
 };

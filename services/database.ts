@@ -71,6 +71,28 @@ export const createOrder = async (order: Omit<Order, 'id' | 'createdAt' | 'statu
   });
 };
 
+export const getCustomerOrders = async (identifier: { userId?: string, guestId?: string }): Promise<Order[]> => {
+  let q;
+  if (identifier.userId) {
+    q = query(
+      collection(db, ORDERS_COLLECTION),
+      where('userId', '==', identifier.userId),
+      orderBy('createdAt', 'desc')
+    );
+  } else if (identifier.guestId) {
+    q = query(
+      collection(db, ORDERS_COLLECTION),
+      where('guestId', '==', identifier.guestId),
+      orderBy('createdAt', 'desc')
+    );
+  } else {
+    return [];
+  }
+  
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+};
+
 export const getOrdersByPeriod = async (start: number, end: number): Promise<Order[]> => {
   const q = query(
     collection(db, ORDERS_COLLECTION),

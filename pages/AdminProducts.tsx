@@ -8,7 +8,7 @@ import { auth } from '../firebase-config';
 import { 
   Package, ShoppingBag, Plus, Edit2, Trash2, Save, X, 
   LayoutDashboard, ToggleLeft as Toggle, Image as ImageIcon,
-  Tag as TagIcon, ListFilter, Database, Sparkles, Eye, LogOut, Settings2, PlusCircle, ExternalLink, Minus,
+  Tag as TagIcon, ListFilter, Database, Eye, LogOut, Settings2, PlusCircle, ExternalLink, Minus,
   Camera, Copy, Zap, Info, ChevronRight, Wand2, Utensils, Check, Calendar, ClipboardList, PieChart
 } from 'lucide-react';
 
@@ -121,6 +121,23 @@ const PRESET_GROUPS = [
         { name: 'Maionese de Legumes' }
       ]
     }
+  },
+  {
+    label: 'Bebidas',
+    icon: '🥤',
+    group: {
+      name: 'Bebidas e Refrigerantes',
+      min: 0,
+      max: 1,
+      items: [
+        { name: 'Coca-Cola 350ml', imageUrl: 'coca-cola-350ml.png', price: 6.00 },
+        { name: 'Coca-Cola 600ml', imageUrl: 'coca-cola-600ml.png', price: 8.50 },
+        { name: 'Coca-Cola Zero 600ml', imageUrl: 'coca-cola-zero-600ml.png', price: 8.50 },
+        { name: 'Fanta Laranja 350ml', imageUrl: 'fanta-laranja-350ml.png', price: 5.50 },
+        { name: 'Guaraná Kuat 350ml', imageUrl: 'guaraná-kuat-350ml.png', price: 5.50 },
+        { name: 'Sprite Limão 350ml', imageUrl: 'sprite-limao-350ml.png', price: 5.50 }
+      ]
+    }
   }
 ];
 
@@ -142,6 +159,29 @@ const AdminProducts: React.FC = () => {
     availableDays: [0, 1, 2, 3, 4, 5, 6],
     optionsGroups: [] as OptionGroup[]
   });
+
+  const formatImageUrl = (url?: string) => {
+    if (!url) return null;
+    if (url.startsWith('http')) return url;
+    if (url.startsWith('/')) return url;
+    return `/assets/options/${url}`;
+  };
+
+  const AVAILABLE_ASSETS = [
+    'arroz-branco.png',
+    'batata-frita.png',
+    'coca-cola-350ml.png',
+    'coca-cola-600ml.png',
+    'coca-cola-zero-600ml.png',
+    'fanta-laranja-350ml.png',
+    'farofa.png',
+    'feijao-carioca.png',
+    'feijoada.png',
+    'guaraná-kuat-350ml.png',
+    'pate-de-alho.png',
+    'sprite-limao-350ml.png',
+    'vinagrete.png'
+  ];
 
   useEffect(() => {
     loadProducts();
@@ -266,13 +306,13 @@ const AdminProducts: React.FC = () => {
     }));
   };
 
-  const updateOptionItem = (groupId: string, itemIdx: number, name: string) => {
+  const updateOptionItem = (groupId: string, itemIdx: number, updates: Partial<OptionItem>) => {
     setFormData(prev => ({
       ...prev,
       optionsGroups: prev.optionsGroups.map(g => 
         g.id === groupId ? { 
           ...g, 
-          items: g.items.map((item, idx) => idx === itemIdx ? { ...item, name } : item) 
+          items: g.items.map((item, idx) => idx === itemIdx ? { ...item, ...updates } : item) 
         } : g
       )
     }));
@@ -475,7 +515,9 @@ const AdminProducts: React.FC = () => {
                     <input required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-orange-500 font-bold outline-none" value={formData.name} onChange={e => setFormData({...formData, name: e.target.value})} placeholder="Ex: Marmita de Bife Acebolado" />
                   </div>
                   <div className="md:col-span-2">
-                    <label className="block text-xs font-black text-slate-400 uppercase mb-2">Descrição Curta</label>
+                    <div className="flex justify-between items-center mb-2">
+                      <label className="block text-xs font-black text-slate-400 uppercase">Descrição Curta</label>
+                    </div>
                     <textarea required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl focus:border-orange-500 font-bold outline-none h-24" value={formData.description} onChange={e => setFormData({...formData, description: e.target.value})} placeholder="Descreva os ingredientes principais..." />
                   </div>
 
@@ -590,13 +632,62 @@ const AdminProducts: React.FC = () => {
                           <label className="block text-[10px] font-black text-slate-400 uppercase px-1">Itens Disponíveis</label>
                           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                             {group.items.map((item, iIdx) => (
-                              <div key={iIdx} className="flex gap-2">
-                                <input className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-xs font-bold focus:border-orange-500 outline-none" value={item.name} onChange={e => updateOptionItem(group.id, iIdx, e.target.value)} placeholder={`Item ${iIdx + 1}`} />
-                                <button type="button" onClick={() => updateGroup(group.id, { items: group.items.filter((_, i) => i !== iIdx) })} className="p-2 text-slate-300 hover:text-red-500"><Trash2 size={16} /></button>
+                              <div key={iIdx} className="bg-white p-4 rounded-2xl border border-slate-200 space-y-3 relative group/opt">
+                                <button type="button" onClick={() => updateGroup(group.id, { items: group.items.filter((_, i) => i !== iIdx) })} className="absolute top-2 right-2 p-1 text-slate-300 hover:text-red-500 transition-colors opacity-0 group-hover/opt:opacity-100"><X size={14} /></button>
+                                
+                                <div className="space-y-2">
+                                  <label className="block text-[8px] font-black text-slate-400 uppercase">Nome</label>
+                                  <input className="w-full px-3 py-2 rounded-lg border border-slate-100 text-xs font-bold focus:border-orange-500 outline-none" value={item.name} onChange={e => updateOptionItem(group.id, iIdx, { name: e.target.value })} placeholder="Nome do item" />
+                                </div>
+
+                                <div className="grid grid-cols-2 gap-2">
+                                  <div className="space-y-2">
+                                    <label className="block text-[8px] font-black text-slate-400 uppercase tracking-tighter truncate">Preço Adic. (R$)</label>
+                                    <input type="number" step="0.01" className="w-full px-3 py-2 rounded-lg border border-slate-100 text-xs font-bold focus:border-orange-500 outline-none" value={item.price || ''} onChange={e => updateOptionItem(group.id, iIdx, { price: parseFloat(e.target.value) || 0 })} placeholder="0.00" />
+                                  </div>
+                                  <div className="space-y-2">
+                                    <label className="block text-[8px] font-black text-slate-400 uppercase">Imagem do Item</label>
+                                    <div className="flex gap-2">
+                                      <div className="w-10 h-10 rounded-lg bg-slate-100 border border-slate-200 overflow-hidden shrink-0 flex items-center justify-center">
+                                        {item.imageUrl ? (
+                                          <img 
+                                            src={formatImageUrl(item.imageUrl)!} 
+                                            className="w-full h-full object-cover" 
+                                            onError={(e) => { (e.target as HTMLImageElement).src = 'https://placehold.co/40x40?text=?'; }}
+                                          />
+                                        ) : (
+                                          <ImageIcon size={16} className="text-slate-300" />
+                                        )}
+                                      </div>
+                                      <div className="flex-1 space-y-1">
+                                        <select 
+                                          className="w-full px-3 py-2 rounded-lg border border-slate-100 text-[10px] font-bold focus:border-orange-500 outline-none bg-white"
+                                          value={AVAILABLE_ASSETS.includes(item.imageUrl || '') ? item.imageUrl : ''}
+                                          onChange={e => updateOptionItem(group.id, iIdx, { imageUrl: e.target.value })}
+                                        >
+                                          <option value="">{item.imageUrl && !AVAILABLE_ASSETS.includes(item.imageUrl) ? '-- Link Externo --' : 'Selecionar da Pasta'}</option>
+                                          {AVAILABLE_ASSETS.map(asset => (
+                                            <option key={asset} value={asset}>{asset.replace('.png', '').replace(/-/g, ' ')}</option>
+                                          ))}
+                                          <option value="CUSTOM">-- Outro (Link Manual) --</option>
+                                        </select>
+                                        
+                                        {(!AVAILABLE_ASSETS.includes(item.imageUrl || '') || item.imageUrl === 'CUSTOM') && (
+                                          <input 
+                                            className="w-full px-3 py-1.5 mt-1 rounded-lg border border-slate-100 text-[9px] font-bold focus:border-orange-500 outline-none" 
+                                            value={item.imageUrl === 'CUSTOM' ? '' : item.imageUrl || ''} 
+                                            onChange={e => updateOptionItem(group.id, iIdx, { imageUrl: e.target.value })} 
+                                            placeholder="Cole o link aqui..."
+                                          />
+                                        )}
+                                      </div>
+                                    </div>
+                                  </div>
+                                </div>
                               </div>
                             ))}
-                            <button type="button" onClick={() => addOptionItem(group.id)} className="px-4 py-2.5 border-2 border-dashed border-slate-200 rounded-xl text-[10px] font-black text-slate-400 hover:border-orange-400 hover:text-orange-500 transition-all flex items-center justify-center gap-2">
-                               <Plus size={14} /> Adicionar Opção
+                            <button type="button" onClick={() => addOptionItem(group.id)} className="px-4 py-4 border-2 border-dashed border-slate-200 rounded-2xl text-[10px] font-black text-slate-400 hover:border-orange-400 hover:text-orange-500 transition-all flex flex-col items-center justify-center gap-2 bg-white">
+                               <Plus size={18} /> Nova Opção
                             </button>
                           </div>
                         </div>

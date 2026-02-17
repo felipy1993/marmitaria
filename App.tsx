@@ -61,6 +61,7 @@ const ProtectedRoute = ({ children }: { children?: React.ReactNode }) => {
   return <>{children}</>;
 };
 
+
 const App: React.FC = () => {
   const [items, setItems] = useState<CartItem[]>([]);
 

@@ -232,6 +232,7 @@ const AdminSettings: React.FC = () => {
             </form>
           </section>
 
+
           <section className="bg-white p-10 rounded-[2.5rem] shadow-sm border border-slate-100 space-y-8">
             <div className="flex items-center gap-3 text-orange-500">
               <Tag size={24} />
