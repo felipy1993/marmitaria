@@ -596,8 +596,14 @@ const Store: React.FC = () => {
             </Link>
             
             <div 
-              onClick={() => items.length > 0 ? setIsCheckoutOpen(true) : setIsCartOpen(true)}
-              className="hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100 ml-4 max-w-xs truncate cursor-pointer hover:bg-slate-100 transition-colors"
+              onClick={() => {
+                if (items.length > 0) {
+                  setIsCheckoutOpen(true);
+                } else {
+                  alert("Adicione itens à sacola para definir o endereço de entrega.");
+                }
+              }}
+              className={`hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100 ml-4 max-w-xs truncate transition-colors ${items.length > 0 ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`}
             >
               <MapPin size={14} className="text-orange-500 shrink-0" />
               <span className="text-xs font-bold text-slate-600 truncate">
