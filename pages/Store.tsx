@@ -615,9 +615,41 @@ const Store: React.FC = () => {
 
           <div className="flex items-center gap-3">
             {currentUser ? (
-              <button onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} className="p-1 border border-slate-100 rounded-full">
-                 <img src={currentUser.photoURL || ''} alt="" className="w-8 h-8 rounded-full" />
-              </button>
+              <div className="relative">
+                <button 
+                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)} 
+                  className="p-1 border border-slate-100 rounded-full hover:bg-slate-50 transition-all shadow-sm flex items-center gap-2"
+                >
+                   <img src={currentUser.photoURL || ''} alt="" className="w-8 h-8 rounded-full object-cover" />
+                   <ChevronDown size={14} className="text-slate-400 mr-1" />
+                </button>
+                
+                {isUserMenuOpen && (
+                  <div className="absolute top-12 right-0 w-56 bg-white border border-slate-100 rounded-2xl shadow-xl p-2 z-[70] animate-scale-in origin-top-right">
+                    <div className="px-3 py-2 border-b border-slate-50 mb-1">
+                      <p className="text-xs font-black text-slate-800 truncate">{currentUser.displayName}</p>
+                      <p className="text-[10px] text-slate-400 font-bold truncate">{currentUser.email}</p>
+                    </div>
+                    
+                    <button 
+                      onClick={() => {
+                        setIsMyOrdersOpen(true);
+                        setIsUserMenuOpen(false);
+                      }}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-50 rounded-xl transition-all mb-1 md:hidden"
+                    >
+                      <ClipboardList size={14} /> Meus Pedidos
+                    </button>
+
+                    <button 
+                      onClick={handleLogout}
+                      className="w-full flex items-center gap-2 px-3 py-2 text-xs font-black text-red-500 hover:bg-red-50 rounded-xl transition-all"
+                    >
+                      <LogOut size={14} /> Sair
+                    </button>
+                  </div>
+                )}
+              </div>
             ) : (
               <button onClick={handleGoogleLogin} className="text-xs font-black text-orange-500 uppercase tracking-widest px-4 py-2 hover:bg-orange-50 rounded-lg transition-all">
                 Entrar
