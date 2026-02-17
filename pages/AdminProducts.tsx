@@ -170,6 +170,8 @@ const AdminProducts: React.FC = () => {
   const AVAILABLE_ASSETS = [
     'arroz-branco.png',
     'batata-frita.png',
+    'bife-frito.png',
+    'bisteca-suina.png',
     'coca-cola-350ml.png',
     'coca-cola-600ml.png',
     'coca-cola-zero-600ml.png',
@@ -177,7 +179,9 @@ const AdminProducts: React.FC = () => {
     'farofa.png',
     'feijao-carioca.png',
     'feijoada.png',
+    'frango-grelhado.png',
     'guaraná-kuat-350ml.png',
+    'ovo-frito.png',
     'pate-de-alho.png',
     'sprite-limao-350ml.png',
     'vinagrete.png'
