@@ -59,8 +59,9 @@ const Store: React.FC = () => {
 
   const [customizingProduct, setCustomizingProduct] = useState<Product | null>(null);
   const [editingCartItemId, setEditingCartItemId] = useState<string | null>(null);
-  const [currentSelections, setCurrentSelections] = useState<Record<string, string[]>>({});
+  const [currentSelections, setCurrentSelections] = useState<Record<string, Record<string, number>>>({});
   const [observation, setObservation] = useState('');
+  const [itemQuantity, setItemQuantity] = useState(1);
 
   const { items, addToCart, updateCartItem, removeFromCart, clearCart, total: subtotal } = useCart();
 
@@ -276,25 +277,52 @@ const Store: React.FC = () => {
     }
   };
 
-  const toggleOption = (groupId: string, itemName: string, group: OptionGroup) => {
+  const getOptionQuantity = (groupId: string, itemName: string) => {
+    return currentSelections[groupId]?.[itemName] || 0;
+  };
+
+  const addOption = (groupId: string, itemName: string, group: OptionGroup) => {
     setCurrentSelections(prev => {
-      const currentGroup = prev[groupId] || [];
-      const isSelected = currentGroup.includes(itemName);
+      const currentGroup = prev[groupId] || {};
+      const currentCount = Object.values(currentGroup).reduce((acc, val) => acc + val, 0);
+      const itemQuantity = currentGroup[itemName] || 0;
 
-      if (isSelected) {
-        return { ...prev, [groupId]: currentGroup.filter(i => i !== itemName) };
-      }
-
-      const hasExtraPrice = group.extraPricePerItem && group.extraPricePerItem > 0;
-      
-      if (hasExtraPrice || currentGroup.length < (group.max || 99)) {
-        if (group.max === 1 && !hasExtraPrice) {
-            return { ...prev, [groupId]: [itemName] };
+      // Se for preço individual ou houver espaço no limite
+      if (!group.max || currentCount < group.max || (group.extraPricePerItem && group.extraPricePerItem > 0)) {
+        // Se max for 1 e não tiver preço extra, substitui (comportamento de rádio)
+        if (group.max === 1 && (!group.extraPricePerItem || group.extraPricePerItem === 0)) {
+          return { ...prev, [groupId]: { [itemName]: 1 } };
         }
-        return { ...prev, [groupId]: [...currentGroup, itemName] };
+        return {
+          ...prev,
+          [groupId]: {
+            ...currentGroup,
+            [itemName]: itemQuantity + 1
+          }
+        };
+      }
+      return prev;
+    });
+  };
+
+  const removeOption = (groupId: string, itemName: string) => {
+    setCurrentSelections(prev => {
+      const currentGroup = prev[groupId] || {};
+      const itemQuantity = currentGroup[itemName] || 0;
+
+      if (itemQuantity <= 1) {
+        const newGroup = { ...currentGroup };
+        delete newGroup[itemName];
+        return { ...prev, [groupId]: newGroup };
       }
 
-      return prev;
+      return {
+        ...prev,
+        [groupId]: {
+          ...currentGroup,
+          [itemName]: itemQuantity - 1
+        }
+      };
     });
   };
 
@@ -303,19 +331,20 @@ const Store: React.FC = () => {
     let total = customizingProduct.price;
     
     customizingProduct.optionsGroups?.forEach(g => {
-      const selections = currentSelections[g.id] || [];
+      const selections = currentSelections[g.id] || {};
+      const itemCount = Object.values(selections).reduce((acc, qty) => acc + qty, 0);
       
-      // Soma preços individuais de cada item selecionado
-      selections.forEach(selectedName => {
-        const optionItem = g.items.find(i => i.name === selectedName);
+      // Soma preços individuais de cada item selecionado (incluindo quantidade)
+      Object.entries(selections).forEach(([name, qty]) => {
+        const optionItem = g.items.find(i => i.name === name);
         if (optionItem?.price) {
-          total += optionItem.price;
+          total += (optionItem.price * qty);
         }
       });
 
       // Soma extra para quando excede o limite (se configurado)
-      if (g.extraPricePerItem && selections.length > g.max) {
-        total += (selections.length - g.max) * g.extraPricePerItem;
+      if (g.extraPricePerItem && itemCount > g.max) {
+        total += (itemCount - g.max) * g.extraPricePerItem;
       }
     });
     
@@ -326,23 +355,31 @@ const Store: React.FC = () => {
     if (!customizingProduct) return false;
     if (!customizingProduct.optionsGroups?.length) return true;
     return customizingProduct.optionsGroups.every(g => {
-      const count = (currentSelections[g.id] || []).length;
+      const selections = currentSelections[g.id] || {};
+      const count = Object.values(selections).reduce((acc, qty) => acc + qty, 0);
       return count >= g.min;
     });
   };
 
   const confirmCustomization = () => {
     if (!customizingProduct || !isSelectionValid()) return;
-    const selectedOptions: SelectedOption[] = customizingProduct.optionsGroups?.map(g => ({
-      groupName: g.name,
-      items: currentSelections[g.id] || []
-    })) || [];
+    const selectedOptions: SelectedOption[] = customizingProduct.optionsGroups?.map(g => {
+      const selections = currentSelections[g.id] || {};
+      const itemsList: string[] = [];
+      Object.entries(selections).forEach(([itemName, qty]) => {
+        for (let i = 0; i < qty; i++) itemsList.push(itemName);
+      });
+      return {
+        groupName: g.name,
+        items: itemsList
+      };
+    }) || [];
     
     const itemData = {
       productId: editingCartItemId || `${customizingProduct.id}-${Date.now()}`,
       name: customizingProduct.name,
       price: calculateCurrentPrice(),
-      quantity: 1, 
+      quantity: itemQuantity, 
       selectedOptions,
       observation,
       restaurantId: customizingProduct.restaurantId
@@ -364,6 +401,7 @@ const Store: React.FC = () => {
     setEditingCartItemId(null);
     setCurrentSelections({});
     setObservation('');
+    setItemQuantity(1);
   };
 
   const handleEditCartItem = (item: OrderItem) => {
@@ -372,12 +410,17 @@ const Store: React.FC = () => {
 
     setCustomizingProduct(product);
     setEditingCartItemId(item.productId);
+    setItemQuantity(item.quantity);
     
-    const newSelections: Record<string, string[]> = {};
+    const newSelections: Record<string, Record<string, number>> = {};
     product.optionsGroups?.forEach(group => {
       const savedOpt = item.selectedOptions?.find(so => so.groupName === group.name);
       if (savedOpt) {
-        newSelections[group.id] = savedOpt.items;
+        const counts: Record<string, number> = {};
+        savedOpt.items.forEach(name => {
+          counts[name] = (counts[name] || 0) + 1;
+        });
+        newSelections[group.id] = counts;
       }
     });
 
@@ -696,18 +739,22 @@ const Store: React.FC = () => {
                     <div>
                       <h4 className="text-base font-black text-slate-800">{group.name}</h4>
                       <p className="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">
-                        {group.min > 0 ? `Obrigatório • ` : ''} 
-                        Até {group.max} itens grátis
+                        {group.min > 0 ? (
+                          <span className="text-orange-500">Obrigatório • Selecione pelo menos {group.min}</span>
+                        ) : (
+                          <span className="text-slate-400 font-bold">Opcional</span>
+                        )}
+                        {group.max > 0 && ` • Até ${group.max} itens`}
                         {group.extraPricePerItem ? ` • +R$ ${group.extraPricePerItem.toFixed(2)} por adicional` : ''}
                       </p>
                     </div>
                   </div>
                   <div className="grid grid-cols-1 gap-3">
                     {group.items.map(item => (
-                      <label 
+                      <div 
                         key={item.name} 
-                        className={`flex items-center justify-between p-3 rounded-2xl border-2 transition-all cursor-pointer group/item ${
-                          currentSelections[group.id]?.includes(item.name) 
+                        className={`flex items-center justify-between p-3 rounded-2xl border-2 transition-all group/item ${
+                          getOptionQuantity(group.id, item.name) > 0 
                           ? 'border-orange-500 bg-orange-50/30' 
                           : 'border-slate-100 hover:border-slate-200 hover:bg-slate-50'
                         }`}
@@ -721,17 +768,15 @@ const Store: React.FC = () => {
                                 <ShoppingBag size={20} />
                               </div>
                             )}
-                            <div className={`absolute -top-2 -left-2 w-6 h-6 rounded-full border-2 border-white flex items-center justify-center transition-all ${
-                              currentSelections[group.id]?.includes(item.name) 
-                              ? 'bg-orange-500 scale-110 shadow-lg shadow-orange-500/20' 
-                              : 'bg-white border-slate-200'
-                            }`}>
-                              {currentSelections[group.id]?.includes(item.name) && <Check size={12} className="text-white" />}
-                            </div>
+                            {getOptionQuantity(group.id, item.name) > 0 && (
+                              <div className="absolute -top-2 -left-2 w-6 h-6 rounded-full bg-orange-500 border-2 border-white flex items-center justify-center text-white text-[10px] font-black scale-110 shadow-lg shadow-orange-500/20">
+                                {getOptionQuantity(group.id, item.name)}
+                              </div>
+                            )}
                           </div>
                           <div>
                             <span className={`font-black text-sm tracking-tight transition-colors block ${
-                              currentSelections[group.id]?.includes(item.name) ? 'text-slate-900' : 'text-slate-600'
+                              getOptionQuantity(group.id, item.name) > 0 ? 'text-slate-900' : 'text-slate-600'
                             }`}>
                               {item.name}
                             </span>
@@ -740,27 +785,37 @@ const Store: React.FC = () => {
                                 + R$ {item.price.toFixed(2)}
                               </span>
                             )}
+                            {group.extraPricePerItem && group.extraPricePerItem > 0 && 
+                             Object.values(currentSelections[group.id] || {}).reduce((a, b) => a + b, 0) >= group.max && (
+                              <span className="text-[9px] font-black bg-orange-100 text-orange-600 px-2 py-0.5 rounded-md mt-1 inline-block">
+                                + R$ {group.extraPricePerItem.toFixed(2)} adicional
+                              </span>
+                            )}
                           </div>
                         </div>
 
-                        {/* Preço Extra (quando limite grátis é excedido) */}
-                        {group.extraPricePerItem && group.extraPricePerItem > 0 && 
-                         (currentSelections[group.id] || []).length >= group.max && 
-                         !currentSelections[group.id]?.includes(item.name) && (
-                          <div className="pr-2">
-                             <span className="text-[9px] font-black bg-orange-100 text-orange-600 px-3 py-1.5 rounded-full ring-2 ring-white">
-                               + R$ {group.extraPricePerItem.toFixed(2)}
-                             </span>
-                          </div>
-                        )}
-                        
-                        <input 
-                          type="checkbox" 
-                          className="hidden" 
-                          checked={currentSelections[group.id]?.includes(item.name)} 
-                          onChange={() => toggleOption(group.id, item.name, group)} 
-                        />
-                      </label>
+                        <div className="flex items-center gap-1">
+                          {getOptionQuantity(group.id, item.name) > 0 && (
+                             <button 
+                               onClick={() => removeOption(group.id, item.name)}
+                               className="p-2 hover:bg-orange-100 text-orange-600 rounded-lg transition-all"
+                             >
+                                <Minus size={16} />
+                             </button>
+                          )}
+                          {getOptionQuantity(group.id, item.name) > 0 && (
+                            <span className="w-8 text-center font-black text-sm text-slate-900">
+                               {getOptionQuantity(group.id, item.name)}
+                            </span>
+                          )}
+                          <button 
+                            onClick={() => addOption(group.id, item.name, group)}
+                            className="p-2 hover:bg-orange-100 text-orange-600 rounded-lg transition-all"
+                          >
+                             <Plus size={16} />
+                          </button>
+                        </div>
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -773,9 +828,26 @@ const Store: React.FC = () => {
 
             {/* Footer de Ação Refinado */}
             <div className="p-8 border-t border-slate-100 bg-slate-50/50 space-y-5 shrink-0">
-               <div className="flex justify-between items-end px-1">
-                  <span className="text-slate-300 font-black uppercase text-[9px] tracking-[0.2em] mb-1">Preço Individual</span>
-                  <span className="text-2xl font-black text-slate-900 tracking-tight">R$ {calculateCurrentPrice().toFixed(2)}</span>
+               <div className="flex justify-between items-center px-1">
+                  <div className="flex items-center gap-4 bg-white border border-slate-200 p-2 rounded-2xl shadow-sm">
+                    <button 
+                      onClick={() => setItemQuantity(prev => Math.max(1, prev - 1))}
+                      className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all"
+                    >
+                      <Minus size={20} />
+                    </button>
+                    <span className="w-8 text-center font-black text-lg text-slate-900">{itemQuantity}</span>
+                    <button 
+                      onClick={() => setItemQuantity(prev => prev + 1)}
+                      className="w-10 h-10 flex items-center justify-center text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-xl transition-all"
+                    >
+                      <Plus size={20} />
+                    </button>
+                  </div>
+                  <div className="text-right">
+                    <span className="text-slate-300 font-black uppercase text-[9px] tracking-[0.2em] mb-1 block">Total do Item</span>
+                    <span className="text-2xl font-black text-slate-900 tracking-tight">R$ {(calculateCurrentPrice() * itemQuantity).toFixed(2)}</span>
+                  </div>
                </div>
                <button 
                 onClick={confirmCustomization} 
@@ -876,6 +948,14 @@ const Store: React.FC = () => {
               >
                 Escolher Endereço
                 <ArrowRight size={18} />
+              </button>
+              
+              <button 
+                onClick={() => setIsCartOpen(false)} 
+                className="w-full py-4 border-2 border-slate-100 text-slate-500 font-black text-[10px] uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-all flex items-center justify-center gap-2 mt-2"
+              >
+                <ArrowLeft size={14} />
+                Continuar Comprando
               </button>
             </div>
           </div>
@@ -1076,6 +1156,30 @@ const Store: React.FC = () => {
                   </div>
               </div>
            </div>
+        </div>
+      )}
+
+      {/* Floating Cart Button (iFood Style) */}
+      {items.length > 0 && !isCartOpen && !isCheckoutOpen && !orderSuccess && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-[80] w-[calc(100%-2rem)] max-w-lg animate-slide-up">
+           <button 
+             onClick={() => setIsCartOpen(true)}
+             className="w-full bg-orange-500 text-white p-4 rounded-2xl shadow-2xl flex justify-between items-center group active:scale-95 transition-all"
+           >
+              <div className="flex items-center gap-4">
+                 <div className="w-10 h-10 bg-white/20 rounded-xl flex items-center justify-center font-black">
+                    {items.reduce((acc, i) => acc + i.quantity, 0)}
+                 </div>
+                 <div className="text-left">
+                    <p className="text-[10px] font-black uppercase tracking-widest opacity-80">Ver Sacola</p>
+                    <p className="font-black text-sm">Pronto para finalizar?</p>
+                 </div>
+              </div>
+              <div className="flex items-center gap-3">
+                 <span className="font-black text-lg">R$ {subtotal.toFixed(2)}</span>
+                 <ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              </div>
+           </button>
         </div>
       )}
 
