@@ -1,0 +1,60 @@
+// Regras de Segurança do Firestore para Marmitaria
+// Copie e cole estas regras no Firebase Console > Firestore Database > Rules
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Configurações do Restaurante - Leitura pública, escrita apenas admin
+    match /config/{document=**} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Produtos - Leitura pública, escrita apenas admin
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Cupons - Leitura pública, escrita apenas admin
+    match /coupons/{couponId} {
+      allow read: if true;
+      allow write: if request.auth != null && request.auth.token.admin == true;
+      allow update: if true; // Permite incrementar uso do cupom
+    }
+    
+    // Pedidos - Usuários podem criar e ler seus próprios pedidos
+    match /orders/{orderId} {
+      // Permite criar pedido (autenticado ou guest)
+      allow create: if true;
+      
+      // Permite ler apenas seus próprios pedidos
+      allow read: if request.auth != null && 
+                     (resource.data.userId == request.auth.uid || 
+                      request.auth.token.admin == true) ||
+                     resource.data.guestId != null;
+      
+      // Apenas admin pode atualizar pedidos
+      allow update: if request.auth != null && request.auth.token.admin == true;
+      
+      // Apenas admin pode deletar
+      allow delete: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Vendas - Apenas admin
+    match /sales/{saleId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Despesas - Apenas admin
+    match /expenses/{expenseId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+    
+    // Estoque - Apenas admin
+    match /stock/{stockId} {
+      allow read, write: if request.auth != null && request.auth.token.admin == true;
+    }
+  }
+}

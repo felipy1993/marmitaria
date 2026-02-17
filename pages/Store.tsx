@@ -434,8 +434,15 @@ const Store: React.FC = () => {
     try {
       const orders = await getCustomerOrders(currentUser ? { userId: currentUser.uid } : { guestId });
       setMyOrders(orders);
-    } catch (err) {
+    } catch (err: any) {
       console.error("Erro ao carregar pedidos:", err);
+      // Se for erro de permissão, apenas define lista vazia
+      if (err?.code === 'permission-denied') {
+        setMyOrders([]);
+        console.warn("Permissões do Firestore não configuradas para leitura de pedidos");
+      } else {
+        setMyOrders([]);
+      }
     }
   };
 
