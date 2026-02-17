@@ -167,25 +167,17 @@ const AdminProducts: React.FC = () => {
     return `/assets/options/${url}`;
   };
 
-  const AVAILABLE_ASSETS = [
-    'arroz-branco.png',
-    'batata-frita.png',
-    'bife-frito.png',
-    'bisteca-suina.png',
-    'coca-cola-350ml.png',
-    'coca-cola-600ml.png',
-    'coca-cola-zero-600ml.png',
-    'fanta-laranja-350ml.png',
-    'farofa.png',
-    'feijao-carioca.png',
-    'feijoada.png',
-    'frango-grelhado.png',
-    'guaraná-kuat-350ml.png',
-    'ovo-frito.png',
-    'pate-de-alho.png',
-    'sprite-limao-350ml.png',
-    'vinagrete.png'
-  ];
+  const GROUPED_ASSETS = {
+    'Bases': ['arroz-branco.png', 'feijao-carioca.png', 'feijoada.png', 'farofa.png'],
+    'Carnes e Proteínas': ['bife-frito.png', 'bisteca-suina.png', 'frango-grelhado.png', 'ovo-frito.png'],
+    'Guarnições e Extras': ['batata-frita.png', 'pate-de-alho.png', 'vinagrete.png'],
+    'Bebidas': [
+      'coca-cola-350ml.png', 'coca-cola-600ml.png', 'coca-cola-zero-600ml.png',
+      'fanta-laranja-350ml.png', 'guaraná-kuat-350ml.png', 'sprite-limao-350ml.png'
+    ]
+  };
+
+  const AVAILABLE_ASSETS = Object.values(GROUPED_ASSETS).flat();
 
   useEffect(() => {
     loadProducts();
@@ -670,8 +662,12 @@ const AdminProducts: React.FC = () => {
                                           onChange={e => updateOptionItem(group.id, iIdx, { imageUrl: e.target.value })}
                                         >
                                           <option value="">{item.imageUrl && !AVAILABLE_ASSETS.includes(item.imageUrl) ? '-- Link Externo --' : 'Selecionar da Pasta'}</option>
-                                          {AVAILABLE_ASSETS.map(asset => (
-                                            <option key={asset} value={asset}>{asset.replace('.png', '').replace(/-/g, ' ')}</option>
+                                          {Object.entries(GROUPED_ASSETS).map(([category, assets]) => (
+                                            <optgroup key={category} label={category}>
+                                              {assets.map(asset => (
+                                                <option key={asset} value={asset}>{asset.replace('.png', '').replace(/-/g, ' ')}</option>
+                                              ))}
+                                            </optgroup>
                                           ))}
                                           <option value="CUSTOM">-- Outro (Link Manual) --</option>
                                         </select>
