@@ -262,7 +262,8 @@ const Store: React.FC = () => {
             city: viaCepData.localidade || ''
           }));
           
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(cleanCep + ", Brasil")}&limit=1`);
+          const query = `${viaCepData.logradouro}, ${viaCepData.localidade}, Brasil`;
+          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
           const geoData = await geoRes.json();
 
           if (geoData?.[0] && config?.latitude && config?.longitude) {

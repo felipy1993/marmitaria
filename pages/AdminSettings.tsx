@@ -103,6 +103,29 @@ const AdminSettings: React.FC = () => {
     }
   };
 
+  const handleCepChange = async (val: string) => {
+    // Formata CEP (apenas números e hifen opcional, mas aqui deixamos livre e limpamos pra API)
+    setConfig(prev => ({ ...prev, cep: val }));
+    
+    const cleanCep = val.replace(/\D/g, '');
+    if (cleanCep.length === 8) {
+       setIsFetchingGeo(true);
+       try {
+         const res = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
+         const data = await res.json();
+         if (!data.erro) {
+           const address = `${data.logradouro}, , ${data.bairro}, ${data.localidade} - ${data.uf}`;
+           setConfig(prev => ({ ...prev, addressBase: address }));
+           alert("Endereço base encontrado! Por favor, adicione o NÚMERO no campo de endereço para calcular as coordenadas com precisão.");
+         }
+       } catch (err) {
+         console.error("Erro ao buscar CEP", err);
+       } finally {
+         setIsFetchingGeo(false);
+       }
+    }
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
       <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col shrink-0">
@@ -158,7 +181,7 @@ const AdminSettings: React.FC = () => {
                     className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
                     placeholder="00000-000"
                     value={config.cep} 
-                    onChange={e => setConfig({...config, cep: e.target.value})} 
+                    onChange={e => handleCepChange(e.target.value)} 
                   />
                 </div>
                 <div>
