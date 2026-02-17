@@ -84,6 +84,7 @@ export interface Order {
   status: OrderStatus;
   createdAt: number;
   restaurantId: string;
+  type: 'delivery' | 'pickup';
 }
 
 export interface RestaurantConfig {

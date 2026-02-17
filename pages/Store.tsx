@@ -76,6 +76,7 @@ const Store: React.FC = () => {
   const [cashAmount, setCashAmount] = useState<string>('');
 
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
+  const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -148,11 +149,12 @@ const Store: React.FC = () => {
   }, [items, products]);
 
   const deliveryFee = useMemo(() => {
+    if (deliveryType === 'pickup') return 0;
     if (!config || isOutsideRadius) return 0; 
-    if (config.isDeliveryFree) return 0;
-    if (subtotal >= config.freeDeliveryOver) return 0;
-    return config.deliveryFee || 0;
-  }, [config, subtotal, isOutsideRadius]);
+    if (config?.isDeliveryFree) return 0;
+    if (subtotal >= (config?.freeDeliveryOver || 0)) return 0;
+    return config?.deliveryFee || 0;
+  }, [config, subtotal, isOutsideRadius, deliveryType]);
 
   const discountAmount = useMemo(() => {
     if (!appliedCoupon) return 0;
@@ -467,14 +469,18 @@ const Store: React.FC = () => {
 
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (items.length === 0 || isOutsideRadius) return;
+    if (items.length === 0) return;
+    if (deliveryType === 'delivery' && isOutsideRadius) return;
     
     try {
-      const fullAddress = `${formData.street}, ${formData.number}${formData.complement ? ' (' + formData.complement + ')' : ''} - ${formData.neighborhood}, ${formData.city} (CEP: ${formData.cep})`;
+      const fullAddress = deliveryType === 'delivery' 
+        ? `${formData.street}, ${formData.number}${formData.complement ? ' (' + formData.complement + ')' : ''} - ${formData.neighborhood}, ${formData.city} (CEP: ${formData.cep})`
+        : `Retirada no Local - ${config?.addressBase || 'Endereço da Loja'}`;
       
       const orderData = {
         userId: currentUser?.uid || null,
         guestId: !currentUser ? guestId : null,
+        type: deliveryType,
         customerName: formData.customerName,
         phone: formData.phone,
         address: fullAddress,
@@ -516,15 +522,15 @@ const Store: React.FC = () => {
   const sendWhatsAppMessage = (orderId: string) => {
     const whatsappNumber = config?.whatsappNumber || '5511999999999';
     
-    let message = `🛵 *NOVO PEDIDO #${orderId.slice(-6)}*\n\n`;
-    message += `👤 *Cliente:* ${formData.customerName}\n`;
-    message += `📱 *Telefone:* ${formData.phone}\n`;
-    message += `📍 *Endereço:* ${formData.street}, ${formData.number}`;
+    let message = `*NOVO PEDIDO #${orderId.slice(-6)}*\n\n`;
+    message += `*Cliente:* ${formData.customerName}\n`;
+    message += `*Telefone:* ${formData.phone}\n`;
+    message += `*Endereço:* ${formData.street}, ${formData.number}`;
     if (formData.complement) message += ` (${formData.complement})`;
     message += `\n   ${formData.neighborhood}, ${formData.city}\n`;
     message += `   CEP: ${formData.cep}\n\n`;
     
-    message += `🍱 *Itens do Pedido:*\n`;
+    message += `*Itens do Pedido:*\n`;
     items.forEach(item => {
       message += `\n• ${item.quantity}x ${item.name} - R$ ${item.price.toFixed(2)}\n`;
       if (item.selectedOptions && item.selectedOptions.length > 0) {
@@ -539,7 +545,7 @@ const Store: React.FC = () => {
       }
     });
     
-    message += `\n💰 *Resumo Financeiro:*\n`;
+    message += `\n*Resumo Financeiro:*\n`;
     message += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
     message += `Entrega: R$ ${deliveryFee.toFixed(2)}\n`;
     if (discountAmount > 0) {
@@ -547,13 +553,13 @@ const Store: React.FC = () => {
     }
     message += `*Total: R$ ${finalTotal.toFixed(2)}*\n\n`;
     
-    message += `💳 *Pagamento:* ${formData.paymentMethod}\n`;
+    message += `*Pagamento:* ${formData.paymentMethod}\n`;
     if (formData.paymentMethod === PaymentMethod.CASH && cashAmount && parseFloat(cashAmount) > finalTotal) {
-      message += `💵 *Troco para:* R$ ${parseFloat(cashAmount).toFixed(2)}\n`;
-      message += `💸 *Troco:* R$ ${(parseFloat(cashAmount) - finalTotal).toFixed(2)}\n`;
+      message += `*Troco para:* R$ ${parseFloat(cashAmount).toFixed(2)}\n`;
+      message += `*Troco:* R$ ${(parseFloat(cashAmount) - finalTotal).toFixed(2)}\n`;
     }
     if (formData.paymentMethod === PaymentMethod.PIX) {
-      message += `\n⚠️ *Aguardando comprovante do PIX*`;
+      message += `\n*Aguardando comprovante do PIX*`;
     }
     
     const encodedMessage = encodeURIComponent(message);
@@ -1089,6 +1095,22 @@ const Store: React.FC = () => {
                 </div>
                 
                 <form onSubmit={handleCheckout} className="space-y-12">
+                  <div className="grid grid-cols-2 gap-2 p-1 bg-slate-100 rounded-2xl mb-8">
+                    <button 
+                      type="button" 
+                      onClick={() => setDeliveryType('delivery')}
+                      className={`py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${deliveryType === 'delivery' ? 'bg-white shadow-sm text-orange-500' : 'text-slate-400'}`}
+                    >
+                      <Truck size={16} /> Entrega
+                    </button>
+                    <button 
+                      type="button" 
+                      onClick={() => setDeliveryType('pickup')}
+                      className={`py-3 rounded-xl font-black text-xs uppercase tracking-widest transition-all flex items-center justify-center gap-2 ${deliveryType === 'pickup' ? 'bg-white shadow-sm text-orange-500' : 'text-slate-400'}`}
+                    >
+                      <ShoppingBag size={16} /> Retirada
+                    </button>
+                  </div>
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
                       <div className="w-7 h-7 rounded-lg bg-orange-50 flex items-center justify-center text-orange-500">
@@ -1109,36 +1131,52 @@ const Store: React.FC = () => {
                   </div>
 
                   {/* Seção 2: Onde Entregar */}
-                  <div className="space-y-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
-                        <MapPin size={18} />
+                  {deliveryType === 'delivery' ? (
+                    <div className="space-y-6 animate-fade-in">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+                          <MapPin size={18} />
+                        </div>
+                        <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Onde Entregar</h4>
                       </div>
-                      <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Onde Entregar</h4>
-                    </div>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CEP</label>
-                        <div className="relative">
-                          <input required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="00000-000" value={formData.cep} onChange={e => handleCepChange(e.target.value)} />
-                          {isSearchingCep && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-orange-500" size={16} />}
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CEP</label>
+                          <div className="relative">
+                            <input required={deliveryType === 'delivery'} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="00000-000" value={formData.cep} onChange={e => handleCepChange(e.target.value)} />
+                            {isSearchingCep && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-orange-500" size={16} />}
+                          </div>
+                        </div>
+                        <div className="md:col-span-2 space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Bairro</label>
+                          <input className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="Ex: Centro" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
+                        </div>
+                        
+                        <div className="md:col-span-2 space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Rua / Logradouro</label>
+                          <input required={deliveryType === 'delivery'} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="Nome da rua" value={formData.street} onChange={e => setFormData({...formData, street: e.target.value})} />
+                        </div>
+                        <div className="space-y-1.5">
+                          <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Número</label>
+                          <input id="address-number" required={deliveryType === 'delivery'} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="123" value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})} />
                         </div>
                       </div>
-                      <div className="md:col-span-2 space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Bairro</label>
-                        <input className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="Ex: Centro" value={formData.neighborhood} onChange={e => setFormData({...formData, neighborhood: e.target.value})} />
+                    </div>
+                  ) : (
+                    <div className="bg-orange-50 p-8 rounded-3xl border border-orange-100 text-center animate-fade-in space-y-4">
+                      <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto text-orange-500 shadow-sm">
+                        <Building2 size={32} />
                       </div>
-                      
-                      <div className="md:col-span-2 space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Rua / Logradouro</label>
-                        <input required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="Nome da rua" value={formData.street} onChange={e => setFormData({...formData, street: e.target.value})} />
+                      <div>
+                        <h4 className="font-black text-orange-900 text-sm uppercase tracking-widest mb-1">Retirar no Local</h4>
+                        <p className="text-slate-700 font-black text-xl leading-tight">{config?.addressBase || 'Endereço não configurado'}</p>
                       </div>
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">Número</label>
-                        <input id="address-number" required className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="123" value={formData.number} onChange={e => setFormData({...formData, number: e.target.value})} />
+                      <div className="bg-white/60 p-4 rounded-xl inline-block border border-orange-100">
+                        <p className="text-[10px] text-orange-800 font-bold uppercase tracking-widest">Tempo estimado de preparo</p>
+                        <p className="text-lg font-black text-slate-900">30 - 45 min</p>
                       </div>
                     </div>
-                  </div>
+                  )}
 
                   {/* Seção 3: Pagamento */}
                   <div className="space-y-6">
@@ -1221,7 +1259,7 @@ const Store: React.FC = () => {
                   <div className="pt-6">
                     <button 
                       type="submit" 
-                      disabled={isOutsideRadius || !formData.street}
+                      disabled={(deliveryType === 'delivery' && (isOutsideRadius || !formData.street)) || !formData.customerName || !formData.phone}
                       className="w-full py-7 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl shadow-orange-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-30 disabled:grayscale"
                     >
                       {isOutsideRadius ? 'Fora do Raio de Entrega' : 'Confirmar e Enviar Pedido'}
@@ -1267,27 +1305,18 @@ const Store: React.FC = () => {
                     </div>
                  )}
 
-                 <div className="grid grid-cols-2 gap-3 pt-4 border-t border-slate-100">
-                    <button 
-                      onClick={() => handleShareReceipt(activeOrder)}
-                      className="flex items-center justify-center gap-2 py-3 bg-green-500 text-white rounded-lg font-bold text-xs uppercase tracking-widest shadow-lg shadow-green-500/20 active:scale-95 transition-all"
-                    >
-                      <Share2 size={16} /> WhatsApp
-                    </button>
-                    <button 
-                      onClick={handlePrintReceipt}
-                      className="flex items-center justify-center gap-2 py-3 bg-slate-100 text-slate-700 rounded-lg font-bold text-xs uppercase tracking-widest active:scale-95 transition-all"
-                    >
-                      <Printer size={16} /> Imprimir
-                    </button>
-                 </div>
+
 
                   <div className="pt-2 space-y-3">
                     <button 
-                      onClick={() => sendWhatsAppMessage(activeOrder.id!)} 
+                      onClick={() => {
+                        const whatsappNumber = config?.whatsappNumber?.replace(/\D/g, '') || '5511999999999';
+                        const text = encodeURIComponent(`Olá, realizei o pedido #${activeOrder.id?.slice(-6)} e gostaria de falar com o restaurante.`);
+                        window.open(`https://wa.me/${whatsappNumber}?text=${text}`, '_blank');
+                      }} 
                       className="w-full py-4 bg-green-500 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-3 hover:bg-green-600 active:scale-95 transition-all shadow-lg shadow-green-500/20"
                     >
-                      <MessageSquare size={18} /> Enviar Pedido para a Loja
+                      <MessageSquare size={18} /> Conversar com a Loja
                     </button>
                     
                     <button 
