@@ -95,6 +95,7 @@ export interface RestaurantConfig {
   latitude?: number;
   longitude?: number;
   cep?: string;
+  whatsappNumber?: string;
 }
 
 export interface Coupon {

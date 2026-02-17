@@ -17,7 +17,8 @@ const AdminSettings: React.FC = () => {
     addressBase: '',
     latitude: -23.55052,
     longitude: -46.633308,
-    cep: ''
+    cep: '',
+    whatsappNumber: ''
   });
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [newCoupon, setNewCoupon] = useState({ 
@@ -190,6 +191,19 @@ const AdminSettings: React.FC = () => {
                     {isFetchingGeo ? <Loader2 className="animate-spin" size={20} /> : <Search size={20} />}
                   </button>
                 </div>
+              </div>
+
+              <div>
+                <label className="block text-xs font-black text-slate-400 uppercase mb-2">WhatsApp da Loja</label>
+                <input 
+                  className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
+                  placeholder="5511999999999 (apenas números)"
+                  value={config.whatsappNumber || ''} 
+                  onChange={e => setConfig({...config, whatsappNumber: e.target.value})} 
+                />
+                <p className="text-[10px] text-slate-400 font-bold mt-2 ml-1">
+                  Digite apenas números, incluindo código do país e DDD (ex: 5511999999999)
+                </p>
               </div>
 
               <div className="grid grid-cols-2 gap-4 p-6 bg-slate-50 rounded-[2rem] border border-slate-200">

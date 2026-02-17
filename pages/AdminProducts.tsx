@@ -128,7 +128,7 @@ const PRESET_GROUPS = [
     group: {
       name: 'Bebidas e Refrigerantes',
       min: 0,
-      max: 1,
+      max: 50,
       items: [
         { name: 'Coca-Cola 350ml', imageUrl: 'coca-cola-350ml.png', price: 6.00 },
         { name: 'Coca-Cola 600ml', imageUrl: 'coca-cola-600ml.png', price: 8.50 },
@@ -169,8 +169,8 @@ const AdminProducts: React.FC = () => {
 
   const GROUPED_ASSETS = {
     'Bases': ['arroz-branco.png', 'feijao-carioca.png', 'feijoada.png', 'farofa.png'],
-    'Carnes e Proteínas': ['bife-frito.png', 'bisteca-suina.png', 'frango-grelhado.png', 'ovo-frito.png'],
-    'Guarnições e Extras': ['batata-frita.png', 'pate-de-alho.png', 'vinagrete.png'],
+    'Carnes e Proteínas': ['bife-frito.png', 'bisteca-suina.png', 'carne-de-panela.png', 'frango-grelhado.png', 'ovo-frito.png'],
+    'Guarnições e Saladas': ['alface.png', 'batata-frita.png', 'pate-de-alho.png', 'vinagrete.png'],
     'Bebidas': [
       'coca-cola-350ml.png', 'coca-cola-600ml.png', 'coca-cola-zero-600ml.png',
       'fanta-laranja-350ml.png', 'guaraná-kuat-350ml.png', 'sprite-limao-350ml.png'

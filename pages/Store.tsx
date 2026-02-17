@@ -73,6 +73,7 @@ const Store: React.FC = () => {
   };
 
   const [formData, setFormData] = useState(INITIAL_FORM_DATA);
+  const [cashAmount, setCashAmount] = useState<string>('');
 
   const [orderSuccess, setOrderSuccess] = useState<string | null>(null);
 
@@ -503,6 +504,54 @@ const Store: React.FC = () => {
       console.error("Erro Checkout:", err);
       alert('Houve uma falha ao processar seu pedido. Verifique sua conexão.');
     }
+  };
+
+  const sendWhatsAppMessage = (orderId: string) => {
+    const whatsappNumber = config?.whatsappNumber || '5511999999999';
+    
+    let message = `🛵 *NOVO PEDIDO #${orderId.slice(-6)}*\n\n`;
+    message += `👤 *Cliente:* ${formData.customerName}\n`;
+    message += `📱 *Telefone:* ${formData.phone}\n`;
+    message += `📍 *Endereço:* ${formData.street}, ${formData.number}`;
+    if (formData.complement) message += ` (${formData.complement})`;
+    message += `\n   ${formData.neighborhood}, ${formData.city}\n`;
+    message += `   CEP: ${formData.cep}\n\n`;
+    
+    message += `🍱 *Itens do Pedido:*\n`;
+    items.forEach(item => {
+      message += `\n• ${item.quantity}x ${item.name} - R$ ${item.price.toFixed(2)}\n`;
+      if (item.selectedOptions && item.selectedOptions.length > 0) {
+        item.selectedOptions.forEach(opt => {
+          if (opt.items.length > 0) {
+            message += `  └ ${opt.groupName}: ${opt.items.join(', ')}\n`;
+          }
+        });
+      }
+      if (item.observation) {
+        message += `  └ Obs: ${item.observation}\n`;
+      }
+    });
+    
+    message += `\n💰 *Resumo Financeiro:*\n`;
+    message += `Subtotal: R$ ${subtotal.toFixed(2)}\n`;
+    message += `Entrega: R$ ${deliveryFee.toFixed(2)}\n`;
+    if (discountAmount > 0) {
+      message += `Desconto: -R$ ${discountAmount.toFixed(2)}\n`;
+    }
+    message += `*Total: R$ ${finalTotal.toFixed(2)}*\n\n`;
+    
+    message += `💳 *Pagamento:* ${formData.paymentMethod}\n`;
+    if (formData.paymentMethod === PaymentMethod.CASH && cashAmount && parseFloat(cashAmount) > finalTotal) {
+      message += `💵 *Troco para:* R$ ${parseFloat(cashAmount).toFixed(2)}\n`;
+      message += `💸 *Troco:* R$ ${(parseFloat(cashAmount) - finalTotal).toFixed(2)}\n`;
+    }
+    if (formData.paymentMethod === PaymentMethod.PIX) {
+      message += `\n⚠️ *Aguardando comprovante do PIX*`;
+    }
+    
+    const encodedMessage = encodeURIComponent(message);
+    const whatsappUrl = `https://wa.me/${whatsappNumber}?text=${encodedMessage}`;
+    window.open(whatsappUrl, '_blank');
   };
 
   const filteredProducts = useMemo(() => {
@@ -1075,6 +1124,52 @@ const Store: React.FC = () => {
                         </button>
                       ))}
                     </div>
+                    
+                    {/* Instruções para PIX */}
+                    {formData.paymentMethod === PaymentMethod.PIX && (
+                      <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-2xl">
+                        <div className="flex items-start gap-3">
+                          <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center text-white shrink-0">
+                            <MessageSquare size={16} />
+                          </div>
+                          <div>
+                            <h5 className="font-black text-sm text-blue-900 mb-1">Importante!</h5>
+                            <p className="text-xs text-blue-700 font-bold leading-relaxed">
+                              Após fazer o PIX, envie o comprovante pelo WhatsApp para confirmar seu pedido.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {/* Campo de Troco para Dinheiro */}
+                    {formData.paymentMethod === PaymentMethod.CASH && (
+                      <div className="mt-4 space-y-3">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">
+                          Vai pagar com quanto? (Opcional)
+                        </label>
+                        <input 
+                          type="number"
+                          step="0.01"
+                          placeholder={`Total: R$ ${finalTotal.toFixed(2)}`}
+                          value={cashAmount}
+                          onChange={(e) => setCashAmount(e.target.value)}
+                          className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300"
+                        />
+                        {cashAmount && parseFloat(cashAmount) > finalTotal && (
+                          <div className="p-4 bg-green-50 border border-green-200 rounded-2xl">
+                            <div className="flex items-center gap-2">
+                              <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
+                                <Check size={14} className="text-white" />
+                              </div>
+                              <p className="text-sm font-black text-green-900">
+                                Troco: R$ {(parseFloat(cashAmount) - finalTotal).toFixed(2)}
+                              </p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
 
                   {/* Botão Finalizar */}
@@ -1143,8 +1238,11 @@ const Store: React.FC = () => {
                  </div>
 
                   <div className="pt-2 space-y-3">
-                    <button onClick={() => window.open(`https://wa.me/5500000000000?text=Olá, gostaria de falar sobre meu pedido #${activeOrder.id?.slice(-6)}`, '_blank')} className="w-full py-4 border-2 border-slate-100 text-slate-600 rounded-lg font-bold text-sm flex items-center justify-center gap-3 hover:bg-slate-50 transition-all">
-                      <MessageSquare size={18} /> Conversar com a loja
+                    <button 
+                      onClick={() => sendWhatsAppMessage(activeOrder.id!)} 
+                      className="w-full py-4 bg-green-500 text-white rounded-lg font-bold text-sm flex items-center justify-center gap-3 hover:bg-green-600 active:scale-95 transition-all shadow-lg shadow-green-500/20"
+                    >
+                      <MessageSquare size={18} /> Enviar Pedido para a Loja
                     </button>
                     
                     <button 
