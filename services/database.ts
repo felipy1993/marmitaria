@@ -26,15 +26,15 @@ const DEFAULT_RESTAURANT_ID = 'main_marmita';
 
 // Products API
 // Products API
+// Products API
 export const getActiveProducts = async (): Promise<Product[]> => {
-  // Temporariamente removendo filtro 'active' para debug
   const q = query(
     collection(db, PRODUCTS_COLLECTION),
-    orderBy('createdAt', 'desc')
+    where('active', '==', true)
   );
   const snapshot = await getDocs(q);
   const products = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Product));
-  return products;
+  return products.sort((a, b) => b.createdAt - a.createdAt);
 };
 
 export const getAllProducts = async (): Promise<Product[]> => {
