@@ -88,9 +88,16 @@ const Store: React.FC = () => {
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
-      setCurrentUser(user);
-      if (user && !formData.customerName) {
-        setFormData(prev => ({ ...prev, customerName: user.displayName || '' }));
+      // Se o usuário logou com email/senha (Admin), não mostramos como logado na loja.
+      const isEmailAdmin = user?.providerData.some((p: any) => p.providerId === 'password');
+      
+      if (user && !isEmailAdmin) {
+        setCurrentUser(user);
+        if (!formData.customerName) {
+          setFormData(prev => ({ ...prev, customerName: user.displayName || '' }));
+        }
+      } else {
+        setCurrentUser(null);
       }
     });
     return () => unsubscribe();
