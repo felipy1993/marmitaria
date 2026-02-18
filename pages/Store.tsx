@@ -87,7 +87,7 @@ const Store: React.FC = () => {
   const [deliveryType, setDeliveryType] = useState<'delivery' | 'pickup'>('delivery');
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, (user) => {
+    const unsubscribe = onAuthStateChanged(auth, (user: FirebaseUser | null) => {
       setCurrentUser(user);
       if (user && !formData.customerName) {
         setFormData(prev => ({ ...prev, customerName: user.displayName || '' }));
@@ -631,11 +631,11 @@ const Store: React.FC = () => {
         <div className="max-w-6xl mx-auto px-4 h-16 md:h-20 flex justify-between items-center">
           <div className="flex items-center gap-4">
             <Link to="/" className="flex items-center gap-2">
-              <div className="w-8 h-8 md:w-10 md:h-10 bg-orange-500 rounded-lg flex items-center justify-center text-white">
-                <UtensilsCrossed size={18} className="md:w-6 md:h-6" />
+              <div className="w-10 h-10 md:w-14 md:h-14 rounded-xl overflow-hidden shrink-0">
+                <img src="/logo.png" alt="Sabor de Casa Logo" className="w-full h-full object-cover" />
               </div>
               <div>
-                <h1 className="text-base md:text-lg font-black text-slate-900 leading-none">Marmita<span className="text-orange-500">Express</span></h1>
+                <h1 className="text-base md:text-xl font-black text-slate-900 leading-none tracking-tight">Sabor<span className="text-orange-500">deCasa</span></h1>
                 <div className="flex items-center gap-1.5 mt-1">
                   <div className={`w-1.5 h-1.5 rounded-full ${isStoreOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{isStoreOpen ? 'Aberto agora' : 'Fechado'}</p>
@@ -855,10 +855,10 @@ const Store: React.FC = () => {
         <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-orange-500 via-red-500 to-orange-500 opacity-50"></div>
         <div className="max-w-7xl mx-auto px-6 flex flex-col items-center gap-6">
            <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-orange-500 rounded-lg flex items-center justify-center text-white">
-                <UtensilsCrossed size={16} />
+              <div className="w-12 h-12 rounded-xl overflow-hidden mb-2">
+                <img src="/logo.png" alt="Sabor de Casa Logo" className="w-full h-full object-cover" />
               </div>
-              <p className="text-white font-black text-lg tracking-tight">Marmita Express</p>
+              <p className="text-white font-black text-lg tracking-tight">Sabor de Casa</p>
            </div>
            <p className="text-slate-500 font-bold text-xs max-w-sm">O sabor caseiro entregue com tecnologia e carinho na porta da sua casa.</p>
            

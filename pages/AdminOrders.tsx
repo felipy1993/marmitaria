@@ -2,14 +2,12 @@
 import React, { useState, useEffect } from 'react';
 import { subscribeToOrders, updateOrderStatus } from '../services/database';
 import { Order, OrderStatus } from '../types';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase-config';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { 
-  LogOut, Package, Clock, Truck, CheckCircle2, LayoutDashboard, ShoppingBag, 
-  Settings2, ClipboardList, PieChart, Eye, Phone, MessageSquare, ExternalLink,
+  Clock, Truck, CheckCircle2, ClipboardList, Eye, Phone, MessageSquare, ExternalLink,
   Archive, RotateCcw, Search, Filter, Printer
 } from 'lucide-react';
+import AdminLayout from '../components/AdminLayout';
 
 const AdminOrders: React.FC = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -19,7 +17,7 @@ const AdminOrders: React.FC = () => {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const unsubscribe = subscribeToOrders((newOrders) => {
+    const unsubscribe = subscribeToOrders((newOrders: Order[]) => {
       setOrders(newOrders);
     });
     return () => unsubscribe();
@@ -31,7 +29,7 @@ const AdminOrders: React.FC = () => {
       const cleanPhone = order.phone.replace(/\D/g, '');
       let message = '';
       if (status === OrderStatus.PREPARING) {
-        message = `Olá *${order.customerName}*! 👋\n\nSeu pedido na *Marmita Express* entrou em preparo! 🍱🔥`;
+        message = `Olá *${order.customerName}*! 👋\n\nSeu pedido na *Sabor de Casa* entrou em preparo! 🍱🔥`;
       } else if (status === OrderStatus.DELIVERING) {
         message = `Olá *${order.customerName}*! 👋\n\nSeu pedido *saiu para entrega*! 🛵💨`;
       }
@@ -50,7 +48,7 @@ const AdminOrders: React.FC = () => {
     }, 100);
   };
 
-  const filteredOrders = orders.filter(order => {
+  const filteredOrders = orders.filter((order: Order) => {
     const isTabMatch = activeTab === 'active' 
       ? order.status !== OrderStatus.FINISHED 
       : order.status === OrderStatus.FINISHED;
@@ -71,84 +69,46 @@ const AdminOrders: React.FC = () => {
     }
   };
 
-  const activeCount = orders.filter(o => o.status !== OrderStatus.FINISHED).length;
+  const activeCount = orders.filter((o: Order) => o.status !== OrderStatus.FINISHED).length;
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col shrink-0">
-        <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-black flex items-center gap-2">
-            <Package className="text-orange-500" /> Marmita<span className="text-orange-500">Admin</span>
-          </h1>
-        </div>
-        <nav className="flex-1 px-4 py-8 space-y-2">
-          <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg">
-            <ClipboardList size={20} /> Pedidos
-          </Link>
-          <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ShoppingBag size={20} /> Produtos
-          </Link>
-          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <PieChart size={20} /> Financeiro
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <Settings2 size={20} /> Configurações
-          </Link>
-          <Link to="/" className="flex items-center gap-3 p-4 rounded-2xl text-orange-400 hover:bg-orange-500/10 transition-all font-bold mt-10">
-            <Eye size={20} /> Ver Loja
-          </Link>
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <button onClick={() => { signOut(auth); navigate('/admin/login'); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold">
-            <LogOut size={20} /> Sair
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col max-h-screen overflow-hidden">
-        <header className="bg-white p-8 border-b border-slate-100 flex flex-col lg:flex-row justify-between items-start lg:items-center gap-6 shrink-0">
+    <AdminLayout activeOrdersCount={activeCount}>
+        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h2 className="text-3xl font-black text-slate-900">Gestão de Pedidos</h2>
-            <p className="text-slate-500 font-medium">Acompanhamento operacional em tempo real</p>
+            <h2 className="text-3xl font-black text-slate-900">Gerenciar Pedidos</h2>
+            <p className="text-slate-500 font-medium">Acompanhe e atualize o status dos pedidos em tempo real</p>
           </div>
           
-          <div className="flex items-center gap-4 bg-slate-50 p-2 rounded-2xl border border-slate-200 w-full lg:w-auto">
-             <div className="relative flex-1 lg:w-64">
-                <Search size={18} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-                <input 
-                  type="text" 
-                  placeholder="Buscar por nome ou fone..." 
-                  className="w-full pl-12 pr-4 py-3 bg-white border border-slate-200 rounded-xl text-sm font-bold outline-none focus:border-orange-500 transition-all"
-                  value={searchTerm}
-                  onChange={e => setSearchTerm(e.target.value)}
-                />
-             </div>
-             <button onClick={() => navigate('/')} className="p-3 bg-slate-900 text-white rounded-xl hover:bg-black transition-all" title="Ver Loja">
-                <ExternalLink size={20} />
-             </button>
+          <div className="flex items-center gap-4 w-full md:w-auto">
+            <div className="relative flex-1 md:w-64">
+              <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" size={18} />
+              <input 
+                type="text" 
+                placeholder="Buscar cliente..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-12 pr-4 py-4 rounded-2xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500/20 bg-white shadow-sm font-bold text-sm"
+              />
+            </div>
           </div>
         </header>
 
-        {/* Abas e Filtros */}
-        <div className="bg-white border-b border-slate-100 px-8 flex gap-8 shrink-0">
-           <button 
-            onClick={() => setActiveTab('active')}
-            className={`py-6 text-sm font-black uppercase tracking-widest transition-all border-b-4 ${activeTab === 'active' ? 'border-orange-500 text-orange-500' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-           >
-             Em Aberto ({activeCount})
-           </button>
-           <button 
-            onClick={() => setActiveTab('finished')}
-            className={`py-6 text-sm font-black uppercase tracking-widest transition-all border-b-4 ${activeTab === 'finished' ? 'border-slate-900 text-slate-900' : 'border-transparent text-slate-400 hover:text-slate-600'}`}
-           >
-             Finalizados
-           </button>
-        </div>
+        <div className="flex gap-4 p-1 bg-slate-200/50 rounded-2xl mb-8 w-fit">
+            <button 
+              onClick={() => setActiveTab('active')}
+              className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab === 'active' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Ativos ({activeCount})
+            </button>
+            <button 
+              onClick={() => setActiveTab('finished')}
+              className={`px-8 py-3 rounded-xl text-sm font-black transition-all ${activeTab === 'finished' ? 'bg-white text-slate-900 shadow-md' : 'text-slate-500 hover:text-slate-700'}`}
+            >
+              Finalizados
+            </button>
+         </div>
 
-        <div className="flex-1 overflow-y-auto p-8 space-y-6 no-scrollbar bg-slate-50/50">
+        <div className="flex-1 overflow-y-auto space-y-6 no-scrollbar">
           {filteredOrders.length === 0 ? (
             <div className="bg-white p-20 rounded-[3rem] text-center border-2 border-dashed border-slate-200">
               <ClipboardList size={64} className="mx-auto mb-4 text-slate-200" />
@@ -239,7 +199,6 @@ const AdminOrders: React.FC = () => {
             ))
           )}
         </div>
-      </main>
 
        <style>{`
         @media print {
@@ -266,7 +225,7 @@ const AdminOrders: React.FC = () => {
       <div className="print-receipt-admin hidden print:block">
         {orderToPrint && (
           <div className="print-item">
-            <div className="text-center font-bold text-lg mb-1">MARMITA EXPRESS</div>
+            <div className="text-center font-bold text-lg mb-1 uppercase tracking-tighter">SABOR DE CASA</div>
             <div className="text-center text-[10px] mb-4 uppercase tracking-widest">Recibo do Cliente</div>
             
             <div className="text-[10px] space-y-0.5 mb-4">
@@ -327,12 +286,12 @@ const AdminOrders: React.FC = () => {
 
             <div className="mt-4 text-center text-[8px] font-bold">
               <p>PAGAMENTO: {orderToPrint.paymentMethod.toUpperCase()}</p>
-              <p className="mt-2">Marmita Express - Sabores que Conectam</p>
+              <p className="mt-2">Sabor de Casa - Comida Caseira com Carinho</p>
             </div>
           </div>
         )}
       </div>
-    </div>
+    </AdminLayout>
   );
 };
 

@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useMemo } from 'react';
 import { getOrdersByPeriod, getTransactionsByPeriod, addTransaction, deleteTransaction, getAllProducts } from '../services/database';
 import { Order, Transaction, Product, OrderStatus } from '../types';
@@ -6,10 +5,11 @@ import { Link, useNavigate } from 'react-router-dom';
 import { signOut } from 'firebase/auth';
 import { auth } from '../firebase-config';
 import { 
-  TrendingUp, TrendingDown, DollarSign, Package, LayoutDashboard, ShoppingBag, 
-  Settings, LogOut, Calendar, Filter, Plus, Trash2, PieChart, Star, 
+  TrendingUp, TrendingDown, DollarSign, Package, 
+  Calendar, Filter, Plus, Trash2, Star, 
   ChevronRight, ArrowUpRight, ArrowDownLeft, Wallet, Receipt, X, ClipboardList, Eye
 } from 'lucide-react';
+import AdminLayout from '../components/AdminLayout';
 
 const AdminFinances: React.FC = () => {
   const navigate = useNavigate();
@@ -58,20 +58,20 @@ const AdminFinances: React.FC = () => {
 
   const billedFromOrders = useMemo(() => {
     return orders
-      .filter(o => o.status === OrderStatus.FINISHED)
-      .reduce((acc, curr) => acc + curr.total, 0);
+      .filter((o: Order) => o.status === OrderStatus.FINISHED)
+      .reduce((acc: number, curr: Order) => acc + curr.total, 0);
   }, [orders]);
 
   const manualIncome = useMemo(() => {
     return transactions
-      .filter(t => t.type === 'income')
-      .reduce((acc, curr) => acc + curr.amount, 0);
+      .filter((t: Transaction) => t.type === 'income')
+      .reduce((acc: number, curr: Transaction) => acc + curr.amount, 0);
   }, [transactions]);
 
   const totalExpenses = useMemo(() => {
     return transactions
-      .filter(t => t.type === 'expense')
-      .reduce((acc, curr) => acc + curr.amount, 0);
+      .filter((t: Transaction) => t.type === 'expense')
+      .reduce((acc: number, curr: Transaction) => acc + curr.amount, 0);
   }, [transactions]);
 
   const totalRevenue = billedFromOrders + manualIncome;
@@ -80,9 +80,9 @@ const AdminFinances: React.FC = () => {
   const salesRanking = useMemo(() => {
     const counts: Record<string, { count: number, revenue: number, category: string }> = {};
     
-    orders.forEach(order => {
-      order.items.forEach(item => {
-        const prod = products.find(p => p.name === item.name);
+    orders.forEach((order: Order) => {
+      order.items.forEach((item: any) => {
+        const prod = products.find((p: Product) => p.name === item.name);
         if (selectedCategory !== 'Todos' && prod?.category !== selectedCategory) return;
 
         if (!counts[item.name]) {
@@ -113,111 +113,76 @@ const AdminFinances: React.FC = () => {
     }
   };
 
-  const categories = ['Todos', ...Array.from(new Set(products.map(p => p.category)))];
+  const categories = ['Todos', ...Array.from(new Set(products.map((p: Product) => p.category)))];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col shrink-0">
-        <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-black flex items-center gap-2">
-            <Package className="text-orange-500" /> Marmita<span className="text-orange-500">Admin</span>
-          </h1>
-        </div>
-        <nav className="flex-1 px-4 py-8 space-y-2">
-          <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ClipboardList size={20} /> Pedidos
-          </Link>
-          <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ShoppingBag size={20} /> Produtos
-          </Link>
-          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg shadow-orange-500/20">
-            <PieChart size={20} /> Financeiro
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <Settings size={20} /> Configurações
-          </Link>
-          <Link to="/" className="flex items-center gap-3 p-4 rounded-2xl text-orange-400 hover:bg-orange-500/10 transition-all font-bold mt-10">
-            <Eye size={20} /> Ver Loja
-          </Link>
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <button onClick={() => { signOut(auth); navigate('/admin/login'); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold">
-            <LogOut size={20} /> Sair
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 p-8 overflow-y-auto no-scrollbar">
+    <AdminLayout>
         <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h2 className="text-3xl font-black text-slate-900">Gestão Financeira</h2>
-            <p className="text-slate-500 font-medium">Relatórios, Fluxo de Caixa e Resultados</p>
+            <h2 className="text-3xl font-black text-slate-900">Financeiro</h2>
+            <p className="text-slate-500 font-medium">Controle de entradas, saídas e ranking de vendas</p>
           </div>
           
-          <div className="flex flex-wrap items-center gap-4 bg-white p-4 rounded-[2rem] shadow-sm border border-slate-100">
+          <div className="flex flex-wrap items-center gap-4 w-full md:w-auto">
             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl">
               <Calendar size={16} className="text-slate-400" />
               <input type="date" className="bg-transparent text-xs font-black outline-none" value={startDate} onChange={e => setStartDate(e.target.value)} />
               <span className="text-slate-300">até</span>
               <input type="date" className="bg-transparent text-xs font-black outline-none" value={endDate} onChange={e => setEndDate(e.target.value)} />
             </div>
-            
+
             <div className="flex items-center gap-2 px-3 py-2 bg-slate-50 rounded-xl">
               <Filter size={16} className="text-slate-400" />
               <select className="bg-transparent text-xs font-black outline-none cursor-pointer" value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
-                {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                {categories.map((cat: any) => <option key={String(cat)} value={String(cat)}>{String(cat)}</option>)}
               </select>
             </div>
 
-            <button onClick={() => setIsModalOpen(true)} className="flex items-center gap-2 bg-slate-900 text-white px-6 py-3 rounded-2xl font-black text-xs hover:bg-black transition-all">
-              <Plus size={16} /> Lançar Valor
+            <button 
+              onClick={() => setIsModalOpen(true)}
+              className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-slate-900 text-white rounded-2xl font-black shadow-xl hover:bg-black transition-all"
+            >
+              <Plus size={20} /> Lançar Valor
             </button>
           </div>
         </header>
 
-        {/* Resumo Financeiro */}
+        {/* Cards de Métricas */}
         <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-             <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-600 mb-6">
+             <div className="w-12 h-12 bg-green-50 rounded-2xl flex items-center justify-center text-green-500 mb-6">
                 <TrendingUp size={24} />
              </div>
              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Receita Total</p>
-             <h3 className="text-3xl font-black text-slate-900">R$ {totalRevenue.toFixed(2)}</h3>
-             <p className="text-[10px] text-green-500 font-bold mt-2 flex items-center gap-1">
-               <ArrowUpRight size={12} /> Incluindo pedidos
-             </p>
+             <h3 className="text-3xl font-black text-green-600">R$ {totalRevenue.toFixed(2)}</h3>
+             <p className="text-[10px] text-slate-400 font-bold mt-2">Vendas + Entradas Manuais</p>
           </div>
 
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
-             <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-600 mb-6">
+             <div className="w-12 h-12 bg-red-50 rounded-2xl flex items-center justify-center text-red-500 mb-6">
                 <TrendingDown size={24} />
              </div>
-             <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Despesas Totais</p>
-             <h3 className="text-3xl font-black text-slate-900">R$ {totalExpenses.toFixed(2)}</h3>
-             <p className="text-[10px] text-red-400 font-bold mt-2 flex items-center gap-1">
-               <ArrowDownLeft size={12} /> Lançamentos manuais
-             </p>
+             <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Despesas</p>
+             <h3 className="text-3xl font-black text-red-500">R$ {totalExpenses.toFixed(2)}</h3>
+             <p className="text-[10px] text-slate-400 font-bold mt-2">Lançamentos de Saída</p>
           </div>
 
-          <div className={`p-8 rounded-[2.5rem] border shadow-xl ${netProfit >= 0 ? 'bg-slate-900 border-slate-800 text-white' : 'bg-red-900 border-red-800 text-white'}`}>
-             <div className={`w-12 h-12 rounded-2xl flex items-center justify-center mb-6 ${netProfit >= 0 ? 'bg-white/10 text-orange-400' : 'bg-white/10 text-white'}`}>
+          <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
+             <div className="w-12 h-12 bg-blue-50 rounded-2xl flex items-center justify-center text-blue-500 mb-6">
                 <Wallet size={24} />
              </div>
-             <p className="text-xs font-black text-white/50 uppercase tracking-widest mb-1">Resultado Líquido</p>
-             <h3 className="text-3xl font-black">R$ {netProfit.toFixed(2)}</h3>
-             <p className="text-[10px] text-white/70 font-bold mt-2">Lucro/Prejuízo do período</p>
+             <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Lucro Líquido</p>
+             <h3 className="text-3xl font-black text-blue-600">R$ {netProfit.toFixed(2)}</h3>
+             <p className="text-[10px] text-slate-400 font-bold mt-2">Resultado Final do Período</p>
           </div>
 
           <div className="bg-white p-8 rounded-[2.5rem] border border-slate-100 shadow-sm">
              <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center text-orange-500 mb-6">
-                <Receipt size={24} />
+                <Package size={24} />
              </div>
              <p className="text-xs font-black text-slate-400 uppercase tracking-widest mb-1">Billed (Pedidos)</p>
              <h3 className="text-3xl font-black text-slate-900">R$ {billedFromOrders.toFixed(2)}</h3>
-             <p className="text-[10px] text-slate-400 font-bold mt-2">{orders.filter(o => o.status === OrderStatus.FINISHED).length} pedidos finalizados</p>
+             <p className="text-[10px] text-slate-400 font-bold mt-2">{orders.filter((o: Order) => o.status === OrderStatus.FINISHED).length} pedidos finalizados</p>
           </div>
         </section>
 
@@ -232,7 +197,7 @@ const AdminFinances: React.FC = () => {
             
             <div className="bg-white rounded-[2.5rem] p-8 border border-slate-100 shadow-sm space-y-4">
               {salesRanking.length > 0 ? (
-                salesRanking.map((item, index) => (
+                salesRanking.map((item: any, index: number) => (
                   <div key={item.name} className="flex items-center justify-between p-4 bg-slate-50 rounded-2xl border border-slate-100 group hover:border-orange-200 transition-all">
                     <div className="flex items-center gap-4">
                       <div className={`w-10 h-10 rounded-xl flex items-center justify-center font-black text-sm ${index === 0 ? 'bg-orange-500 text-white' : 'bg-slate-200 text-slate-500'}`}>
@@ -266,8 +231,8 @@ const AdminFinances: React.FC = () => {
                 </h3>
              </div>
 
-             <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-hidden">
-                <table className="w-full text-left">
+             <div className="bg-white rounded-[2.5rem] border border-slate-100 shadow-sm overflow-x-auto">
+                <table className="w-full text-left min-w-[600px]">
                   <thead className="bg-slate-50 border-b border-slate-100">
                     <tr>
                       <th className="px-8 py-5 text-[10px] font-black text-slate-400 uppercase tracking-widest">Data</th>
@@ -278,7 +243,7 @@ const AdminFinances: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-50">
-                    {transactions.map(t => (
+                    {transactions.map((t: Transaction) => (
                       <tr key={t.id} className="hover:bg-slate-50/50 transition-all">
                         <td className="px-8 py-6 text-xs font-bold text-slate-400">
                           {new Date(t.date).toLocaleDateString('pt-BR')}
@@ -306,8 +271,6 @@ const AdminFinances: React.FC = () => {
              </div>
           </section>
         </div>
-      </main>
-
       {/* Modal Lançamento Financeiro */}
       {isModalOpen && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -374,7 +337,7 @@ const AdminFinances: React.FC = () => {
         .animate-scale-in { animation: scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1); }
         .animate-fade-in { animation: fade-in 0.3s ease-out; }
       `}</style>
-    </div>
+    </AdminLayout>
   );
 };
 

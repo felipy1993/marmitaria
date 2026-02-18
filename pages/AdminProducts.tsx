@@ -2,15 +2,14 @@
 import React, { useState, useEffect } from 'react';
 import { getAllProducts, addProduct, updateProduct, deleteProduct } from '../services/database';
 import { Product, OptionGroup, OptionItem } from '../types';
-import { useNavigate, Link } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase-config';
+import { useNavigate } from 'react-router-dom';
 import { 
   Package, ShoppingBag, Plus, Edit2, Trash2, Save, X, 
-  LayoutDashboard, ToggleLeft as Toggle, Image as ImageIcon,
-  Tag as TagIcon, ListFilter, Database, Eye, LogOut, Settings2, PlusCircle, ExternalLink, Minus,
-  Camera, Copy, Zap, Info, ChevronRight, Wand2, Utensils, Check, Calendar, ClipboardList, PieChart
+  ToggleLeft as Toggle, Image as ImageIcon,
+  Tag as TagIcon, ListFilter, Database, Eye, Settings2, PlusCircle, ExternalLink, Minus,
+  Camera, Copy, Zap, Info, ChevronRight, Wand2, Utensils, Check, Calendar, ClipboardList
 } from 'lucide-react';
+import AdminLayout from '../components/AdminLayout';
 
 const WEEK_DAYS = [
   { label: 'Dom', value: 0 },
@@ -224,17 +223,17 @@ const AdminProducts: React.FC = () => {
   };
 
   const toggleDay = (dayValue: number) => {
-    setFormData(prev => {
+    setFormData((prev: any) => {
       const days = prev.availableDays || [];
       if (days.includes(dayValue)) {
-        return { ...prev, availableDays: days.filter(d => d !== dayValue) };
+        return { ...prev, availableDays: days.filter((d: number) => d !== dayValue) };
       }
       return { ...prev, availableDays: [...days, dayValue] };
     });
   };
 
   const applyTemplate = (template: typeof DISH_TEMPLATES[0]) => {
-    setFormData(prev => ({
+    setFormData((prev: any) => ({
       ...prev,
       name: template.data.name,
       description: template.data.description,
@@ -341,54 +340,26 @@ const AdminProducts: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar */}
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col shrink-0">
-        <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-black flex items-center gap-2">
-            <Package className="text-orange-500" /> Marmita<span className="text-orange-500">Admin</span>
-          </h1>
-        </div>
-        <nav className="flex-1 px-4 py-8 space-y-3">
-          <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ClipboardList size={20} /> Pedidos
-          </Link>
-          <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg shadow-orange-500/20">
-            <ShoppingBag size={20} /> Produtos
-          </Link>
-          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <PieChart size={20} /> Financeiro
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <Settings2 size={20} /> Configurações
-          </Link>
-          <Link to="/" className="flex items-center gap-3 p-4 rounded-2xl text-orange-400 hover:bg-orange-500/10 transition-all font-bold mt-10">
-            <Eye size={20} /> Ver Loja
-          </Link>
-        </nav>
-        
-        <div className="p-4 border-t border-slate-800">
-          <button onClick={() => { signOut(auth); navigate('/admin/login'); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold">
-            <LogOut size={20} /> Sair
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 flex flex-col h-screen overflow-hidden">
-        <header className="bg-white p-8 border-b border-slate-100 flex justify-between items-center shrink-0">
+    <AdminLayout>
+        <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
-            <h2 className="text-3xl font-black text-slate-900">Catálogo</h2>
-            <p className="text-slate-500 font-medium">Gerencie o que seus clientes podem comprar</p>
+            <h2 className="text-3xl font-black text-slate-900 font-outfit">Seus Produtos</h2>
+            <p className="text-slate-500 font-medium font-outfit">Gerencie seu cardápio, categorias e promoções</p>
           </div>
-          <button 
-            onClick={() => handleOpenModal()}
-            className="flex items-center gap-2 bg-slate-900 hover:bg-black text-white px-8 py-4 rounded-[1.5rem] font-black shadow-xl transition-all active:scale-95"
-          >
-            <Plus size={20} /> Novo Item
-          </button>
+          <div className="flex flex-wrap gap-4 w-full md:w-auto">
+             <button 
+                onClick={() => setShowTutorial(true)}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-6 py-4 bg-white text-slate-900 rounded-2xl font-black border border-slate-200 hover:bg-slate-50 transition-all shadow-sm"
+              >
+                <Info size={20} className="text-orange-500" /> Tutorial
+              </button>
+              <button 
+                onClick={() => handleOpenModal()}
+                className="flex-1 md:flex-none flex items-center justify-center gap-2 px-8 py-4 bg-orange-500 text-white rounded-2xl font-black shadow-xl shadow-orange-500/20 hover:bg-orange-600 transition-all"
+              >
+                <Plus size={20} /> Novo Produto
+              </button>
+          </div>
         </header>
 
         <div className="flex-1 overflow-y-auto p-8 space-y-8 no-scrollbar">
@@ -456,8 +427,6 @@ const AdminProducts: React.FC = () => {
             </div>
           )}
         </div>
-      </main>
-
       {/* Modal de CRUD */}
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
@@ -717,7 +686,7 @@ const AdminProducts: React.FC = () => {
         .animate-fade-in { animation: fade-in 0.5s ease-out; }
         .no-scrollbar::-webkit-scrollbar { display: none; }
       `}</style>
-    </div>
+    </AdminLayout>
   );
 };
 

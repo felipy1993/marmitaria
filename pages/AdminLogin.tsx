@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { signInWithEmailAndPassword, setPersistence, browserLocalPersistence, browserSessionPersistence } from 'firebase/auth';
 import { auth } from '../firebase-config';
 import { useNavigate, Link } from 'react-router-dom';
-import { Lock, Mail, Smartphone, Eye, EyeOff, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
+import { Lock, Mail, ChefHat, Eye, EyeOff, AlertCircle, Loader2, ArrowLeft } from 'lucide-react';
 
 const AdminLogin: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -68,8 +68,8 @@ const AdminLogin: React.FC = () => {
 
       <div className="w-full max-w-md animate-scale-in">
         <div className="text-center mb-10">
-          <div className="w-20 h-20 bg-gradient-to-br from-orange-400 to-orange-600 rounded-[2rem] flex items-center justify-center text-white shadow-2xl shadow-orange-500/20 mx-auto mb-6 animate-float">
-            <Smartphone size={40} />
+          <div className="w-24 h-24 rounded-[2rem] overflow-hidden shadow-2xl mx-auto mb-6 animate-float border-4 border-white">
+            <img src="/logo.png" alt="Sabor de Casa Logo" className="w-full h-full object-cover" />
           </div>
           <h1 className="text-3xl font-black text-white tracking-tight">Painel de Controle</h1>
           <p className="text-slate-400 font-medium mt-2">Gestão em tempo real da sua marmitaria</p>
@@ -161,7 +161,7 @@ const AdminLogin: React.FC = () => {
         
         <p className="mt-10 text-center text-slate-500 font-bold text-sm">
           Acesso exclusivo para administradores da <br/>
-          <span className="text-orange-500">Marmita Express</span>
+          <span className="text-orange-500">Sabor de Casa</span>
         </p>
       </div>
 

@@ -2,15 +2,12 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { subscribeToOrders, getAllProducts, getOrdersByPeriod, getTransactionsByPeriod } from '../services/database';
 import { Order, OrderStatus, Product, Transaction } from '../types';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase-config';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  LogOut, Package, Clock, Truck, LayoutDashboard, ShoppingBag, 
-  ExternalLink, Phone, Eye, Settings2, TrendingUp, DollarSign, 
-  Users, Activity, Wallet, PieChart, ArrowUpRight, ArrowDownRight,
-  ClipboardList, ChevronRight
+  TrendingUp, Activity, Wallet, PieChart, ArrowUpRight, ArrowDownRight,
+  ClipboardList, ChevronRight, ShoppingBag
 } from 'lucide-react';
+import AdminLayout from '../components/AdminLayout';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -23,7 +20,7 @@ const AdminDashboard: React.FC = () => {
     const startOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).getTime();
     const endOfDay = new Date().setHours(23, 59, 59, 999);
 
-    const unsubscribeOrders = subscribeToOrders((newOrders) => {
+    const unsubscribeOrders = subscribeToOrders((newOrders: Order[]) => {
       setOrders(newOrders);
     });
 
@@ -33,7 +30,7 @@ const AdminDashboard: React.FC = () => {
           getAllProducts(),
           getTransactionsByPeriod(startOfMonth, endOfDay)
         ]);
-        setActiveProductsCount(allProds.filter(p => p.active).length);
+        setActiveProductsCount(allProds.filter((p: Product) => p.active).length);
         setMonthTransactions(trans);
       } catch (err) {
         console.error(err);
@@ -49,8 +46,8 @@ const AdminDashboard: React.FC = () => {
   // Métricas de Hoje
   const todayStats = useMemo(() => {
     const today = new Date().setHours(0, 0, 0, 0);
-    const todayOrders = orders.filter(o => o.createdAt >= today && o.status === OrderStatus.FINISHED);
-    const revenue = todayOrders.reduce((acc, curr) => acc + curr.total, 0);
+    const todayOrders = orders.filter((o: Order) => o.createdAt >= today && o.status === OrderStatus.FINISHED);
+    const revenue = todayOrders.reduce((acc: number, curr: Order) => acc + curr.total, 0);
     return {
       revenue,
       count: todayOrders.length,
@@ -60,10 +57,10 @@ const AdminDashboard: React.FC = () => {
 
   // Saúde Financeira Mensal (Pedidos Finalizados + Entradas - Despesas)
   const monthlyHealth = useMemo(() => {
-    const finishedOrders = orders.filter(o => o.status === OrderStatus.FINISHED);
-    const orderRevenue = finishedOrders.reduce((acc, curr) => acc + curr.total, 0);
-    const manualIncome = monthTransactions.filter(t => t.type === 'income').reduce((acc, curr) => acc + curr.amount, 0);
-    const expenses = monthTransactions.filter(t => t.type === 'expense').reduce((acc, curr) => acc + curr.amount, 0);
+    const finishedOrders = orders.filter((o: Order) => o.status === OrderStatus.FINISHED);
+    const orderRevenue = finishedOrders.reduce((acc: number, curr: Order) => acc + curr.total, 0);
+    const manualIncome = monthTransactions.filter((t: Transaction) => t.type === 'income').reduce((acc: number, curr: Transaction) => acc + curr.amount, 0);
+    const expenses = monthTransactions.filter((t: Transaction) => t.type === 'expense').reduce((acc: number, curr: Transaction) => acc + curr.amount, 0);
     
     const totalIncome = orderRevenue + manualIncome;
     const profit = totalIncome - expenses;
@@ -71,7 +68,7 @@ const AdminDashboard: React.FC = () => {
     return { totalIncome, expenses, profit };
   }, [orders, monthTransactions]);
 
-  const activeOrdersCount = orders.filter(o => o.status !== OrderStatus.FINISHED).length;
+  const activeOrdersCount = orders.filter((o: Order) => o.status !== OrderStatus.FINISHED).length;
 
   if (loading) return (
     <div className="flex items-center justify-center h-screen bg-slate-50">
@@ -80,46 +77,7 @@ const AdminDashboard: React.FC = () => {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      {/* Sidebar Unificada */}
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col shrink-0">
-        <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-black flex items-center gap-2">
-            <Package className="text-orange-500" /> Marmita<span className="text-orange-500">Admin</span>
-          </h1>
-        </div>
-        
-        <nav className="flex-1 px-4 py-8 space-y-2">
-          <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ClipboardList size={20} /> Pedidos 
-            {activeOrdersCount > 0 && <span className="ml-auto bg-orange-500 text-white text-[10px] px-2 py-0.5 rounded-full">{activeOrdersCount}</span>}
-          </Link>
-          <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ShoppingBag size={20} /> Produtos
-          </Link>
-          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <PieChart size={20} /> Financeiro
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <Settings2 size={20} /> Configurações
-          </Link>
-          <Link to="/" className="flex items-center gap-3 p-4 rounded-2xl text-orange-400 hover:bg-orange-500/10 transition-all font-bold mt-10">
-            <Eye size={20} /> Ver Loja
-          </Link>
-        </nav>
-
-        <div className="p-4 border-t border-slate-800">
-          <button onClick={() => { signOut(auth); navigate('/admin/login'); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold">
-            <LogOut size={20} /> Sair
-          </button>
-        </div>
-      </aside>
-
-      {/* Main Content */}
-      <main className="flex-1 p-8 overflow-y-auto no-scrollbar">
+    <AdminLayout activeOrdersCount={activeOrdersCount}>
         <header className="mb-10 flex flex-col md:flex-row justify-between items-start md:items-center gap-6">
           <div>
             <h2 className="text-3xl font-black text-slate-900">Saúde do Negócio</h2>
@@ -254,8 +212,7 @@ const AdminDashboard: React.FC = () => {
              </div>
           </section>
         </div>
-      </main>
-    </div>
+    </AdminLayout>
   );
 };
 

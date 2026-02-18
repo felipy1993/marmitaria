@@ -2,10 +2,11 @@
 import React, { useState, useEffect } from 'react';
 import { getRestaurantConfig, updateRestaurantConfig, getCoupons, addCoupon, deleteCoupon } from '../services/database';
 import { RestaurantConfig, Coupon } from '../types';
-import { LayoutDashboard, ShoppingBag, Settings, LogOut, Package, Save, Plus, Trash2, Tag, Truck, MapPin, Navigation, Search, Loader2, Coins, Target, ClipboardList, PieChart, Eye } from 'lucide-react';
-import { Link, useNavigate } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
-import { auth } from '../firebase-config';
+import { useNavigate } from 'react-router-dom';
+import { 
+  Save, Plus, Trash2, Tag, Truck, MapPin, Search, Loader2, Coins, Target, Eye
+} from 'lucide-react';
+import AdminLayout from '../components/AdminLayout';
 
 const AdminSettings: React.FC = () => {
   const navigate = useNavigate();
@@ -131,44 +132,10 @@ const AdminSettings: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen bg-slate-50 flex">
-      <aside className="w-64 bg-slate-900 text-white hidden md:flex flex-col shrink-0">
-        <div className="p-6 border-b border-slate-800">
-          <h1 className="text-xl font-black flex items-center gap-2">
-            <Package className="text-orange-500" /> Marmita<span className="text-orange-500">Admin</span>
-          </h1>
-        </div>
-        <nav className="flex-1 px-4 py-8 space-y-3">
-          <Link to="/admin" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <LayoutDashboard size={20} /> Dashboard
-          </Link>
-          <Link to="/admin/orders" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ClipboardList size={20} /> Pedidos
-          </Link>
-          <Link to="/admin/products" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <ShoppingBag size={20} /> Produtos
-          </Link>
-          <Link to="/admin/finances" className="flex items-center gap-3 p-4 rounded-2xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-bold">
-            <PieChart size={20} /> Financeiro
-          </Link>
-          <Link to="/admin/settings" className="flex items-center gap-3 p-4 rounded-2xl bg-orange-500 text-white font-black shadow-lg shadow-orange-500/20">
-            <Settings size={20} /> Configurações
-          </Link>
-          <Link to="/" className="flex items-center gap-3 p-4 rounded-2xl text-orange-400 hover:bg-orange-500/10 transition-all font-bold mt-10">
-            <Eye size={20} /> Ver Loja
-          </Link>
-        </nav>
-        <div className="p-4 border-t border-slate-800">
-          <button onClick={() => { signOut(auth); navigate('/admin/login'); }} className="w-full flex items-center gap-3 p-4 rounded-2xl text-red-400 hover:bg-red-500/10 transition-all font-bold">
-            <LogOut size={20} /> Sair
-          </button>
-        </div>
-      </aside>
-
-      <main className="flex-1 p-8 overflow-y-auto">
-        <header className="mb-12">
-          <h2 className="text-3xl font-black text-slate-900">Configurações Gerais</h2>
-          <p className="text-slate-500 font-medium">Logística, Frete e Promoções</p>
+    <AdminLayout>
+        <header className="mb-10">
+          <h2 className="text-3xl font-black text-slate-900">Configurações</h2>
+          <p className="text-slate-500 font-medium">Gerencie taxas, horários e área de entrega</p>
         </header>
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-10">
@@ -371,8 +338,7 @@ const AdminSettings: React.FC = () => {
             </div>
           </section>
         </div>
-      </main>
-    </div>
+    </AdminLayout>
   );
 };
 
