@@ -97,6 +97,8 @@ export interface RestaurantConfig {
   longitude?: number;
   cep?: string;
   whatsappNumber?: string;
+  openingTime?: string; // e.g., "10:00"
+  closingTime?: string; // e.g., "13:00"
 }
 
 export interface Coupon {

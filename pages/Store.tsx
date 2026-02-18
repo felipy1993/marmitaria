@@ -62,6 +62,14 @@ const Store: React.FC = () => {
   const [currentSelections, setCurrentSelections] = useState<Record<string, Record<string, number>>>({});
   const [observation, setObservation] = useState('');
   const [itemQuantity, setItemQuantity] = useState(1);
+  const [currentTime, setCurrentTime] = useState(new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // 30 segundos
+    return () => clearInterval(timer);
+  }, []);
 
   const { items, addToCart, updateCartItem, removeFromCart, clearCart, total: subtotal } = useCart();
 
@@ -165,6 +173,19 @@ const Store: React.FC = () => {
     const total = subtotal + deliveryFee - discountAmount;
     return total > 0 ? total : 0;
   }, [subtotal, deliveryFee, discountAmount]);
+
+  const isStoreOpen = useMemo(() => {
+    if (!config?.openingTime || !config?.closingTime) return true;
+    
+    const currentStr = `${String(currentTime.getHours()).padStart(2, '0')}:${String(currentTime.getMinutes()).padStart(2, '0')}`;
+    
+    if (config.openingTime <= config.closingTime) {
+      return currentStr >= config.openingTime && currentStr <= config.closingTime;
+    } else {
+      // Caso de horário que vira a noite (ex: 22:00 às 02:00)
+      return currentStr >= config.openingTime || currentStr <= config.closingTime;
+    }
+  }, [config, currentTime]);
 
   useEffect(() => {
     loadInitialData();
@@ -472,6 +493,23 @@ const Store: React.FC = () => {
     e.preventDefault();
     if (items.length === 0) return;
     if (deliveryType === 'delivery' && isOutsideRadius) return;
+
+    const now = new Date();
+    const currentStr = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    
+    let storeTrulyOpen = true;
+    if (config?.openingTime && config?.closingTime) {
+      if (config.openingTime <= config.closingTime) {
+        storeTrulyOpen = currentStr >= config.openingTime && currentStr <= config.closingTime;
+      } else {
+        storeTrulyOpen = currentStr >= config.openingTime || currentStr <= config.closingTime;
+      }
+    }
+
+    if (!storeTrulyOpen) {
+      alert(`Desculpe, a loja fechou agora pouco. Nosso horário de atendimento é das ${config?.openingTime} às ${config?.closingTime}. (Horário atual: ${currentStr})`);
+      return;
+    }
     
     try {
       const fullAddress = deliveryType === 'delivery' 
@@ -598,7 +636,10 @@ const Store: React.FC = () => {
               </div>
               <div>
                 <h1 className="text-base md:text-lg font-black text-slate-900 leading-none">Marmita<span className="text-orange-500">Express</span></h1>
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mt-0.5">Delivery de Marmitas</p>
+                <div className="flex items-center gap-1.5 mt-1">
+                  <div className={`w-1.5 h-1.5 rounded-full ${isStoreOpen ? 'bg-green-500 animate-pulse' : 'bg-red-500'}`}></div>
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">{isStoreOpen ? 'Aberto agora' : 'Fechado'}</p>
+                </div>
               </div>
             </Link>
             
@@ -684,6 +725,17 @@ const Store: React.FC = () => {
         </div>
       </header>
 
+      {!isStoreOpen && (
+        <div className="bg-red-500 text-white font-black py-4 px-6 text-center animate-pulse sticky top-[64px] md:top-[80px] z-[55]">
+          <div className="max-w-6xl mx-auto flex items-center justify-center gap-3">
+            <Clock size={20} />
+            <p className="text-sm uppercase tracking-widest">
+              Loja Fechada no Momento • Horário: {config?.openingTime} às {config?.closingTime}
+            </p>
+          </div>
+        </div>
+      )}
+
       <main className="flex-1 max-w-7xl mx-auto w-full px-6 py-8">
         {/* Banner de Pedido Ativo */}
         {activeOrder && activeOrder.status !== OrderStatus.FINISHED && (
@@ -767,8 +819,18 @@ const Store: React.FC = () => {
             {filteredProducts.map((product, idx) => (
               <div 
                 key={product.id} 
-                onClick={() => product.optionsGroups?.length ? handleOpenCustomization(product) : handleAddAction(product)}
-                className="bg-white p-4 rounded-xl border border-slate-100 hover:border-slate-200 hover:shadow-sm transition-all flex gap-4 cursor-pointer group"
+                onClick={() => {
+                  if (!isStoreOpen) {
+                    alert('Loja fechada no momento. Não é possível adicionar itens à sacola.');
+                    return;
+                  }
+                  product.optionsGroups?.length ? handleOpenCustomization(product) : handleAddAction(product);
+                }}
+                className={`bg-white p-4 rounded-xl border border-slate-100 transition-all flex gap-4 group ${
+                  isStoreOpen 
+                    ? 'hover:border-slate-200 hover:shadow-sm cursor-pointer' 
+                    : 'opacity-60 cursor-not-allowed grayscale-[0.5]'
+                }`}
               >
                 <div className="flex-1 space-y-2">
                   <h3 className="text-base font-bold text-slate-900 leading-snug group-hover:text-orange-500 transition-colors">{product.name}</h3>
@@ -950,13 +1012,15 @@ const Store: React.FC = () => {
                     <span className="text-2xl font-black text-slate-900 tracking-tight">R$ {(calculateCurrentPrice() * itemQuantity).toFixed(2)}</span>
                   </div>
                </div>
-               <button 
+                <button 
                 onClick={confirmCustomization} 
-                disabled={!isSelectionValid()} 
-                className="w-full py-4 bg-slate-900 text-white font-black text-sm uppercase tracking-[0.2em] rounded-xl shadow-lg hover:bg-black active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-20 disabled:grayscale transition-all"
+                disabled={!isStoreOpen || !isSelectionValid()} 
+                className={`w-full py-4 font-black text-sm uppercase tracking-[0.2em] rounded-xl shadow-lg active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-20 disabled:grayscale transition-all ${
+                  isStoreOpen ? 'bg-slate-900 text-white hover:bg-black' : 'bg-slate-200 text-slate-500'
+                }`}
               >
-                 {editingCartItemId ? 'Salvar Alterações' : 'Adicionar à Sacola'}
-                 {!editingCartItemId && <Plus size={18} />}
+                 {editingCartItemId ? 'Salvar Alterações' : isStoreOpen ? 'Adicionar à Sacola' : 'Loja Fechada'}
+                 {!editingCartItemId && isStoreOpen && <Plus size={18} />}
                </button>
             </div>
           </div>
@@ -1256,17 +1320,22 @@ const Store: React.FC = () => {
                     )}
                   </div>
 
-                  {/* Botão Finalizar */}
-                  <div className="pt-6">
-                    <button 
-                      type="submit" 
-                      disabled={(deliveryType === 'delivery' && (isOutsideRadius || !formData.street)) || !formData.customerName || !formData.phone}
-                      className="w-full py-7 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl shadow-orange-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-30 disabled:grayscale"
-                    >
-                      {isOutsideRadius ? 'Fora do Raio de Entrega' : 'Confirmar e Enviar Pedido'}
-                      {!isOutsideRadius && <ArrowRight size={24} />}
-                    </button>
-                  </div>
+                   {/* Botão Finalizar */}
+                   <div className="pt-6">
+                     <button 
+                       type="submit" 
+                       disabled={!isStoreOpen || (deliveryType === 'delivery' && (isOutsideRadius || !formData.street)) || !formData.customerName || !formData.phone}
+                       className="w-full py-7 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl shadow-orange-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-30 disabled:grayscale"
+                     >
+                       {!isStoreOpen ? 'Loja Fechada no Momento' : (isOutsideRadius ? 'Fora do Raio de Entrega' : 'Confirmar e Enviar Pedido')}
+                       {isStoreOpen && !isOutsideRadius && <ArrowRight size={24} />}
+                     </button>
+                     {!isStoreOpen && (
+                       <p className="text-center text-xs font-bold text-red-500 mt-4">
+                         Horário de atendimento: {config?.openingTime} às {config?.closingTime}
+                       </p>
+                     )}
+                   </div>
                 </form>
              </div>
           </div>

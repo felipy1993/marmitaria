@@ -165,7 +165,9 @@ export const getRestaurantConfig = async (): Promise<RestaurantConfig> => {
     deliveryFee: 5,
     isDeliveryFree: false,
     freeDeliveryOver: 50,
-    addressBase: ""
+    addressBase: "",
+    openingTime: "10:00",
+    closingTime: "23:00"
   };
 };
 

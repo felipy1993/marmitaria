@@ -18,7 +18,9 @@ const AdminSettings: React.FC = () => {
     latitude: -23.55052,
     longitude: -46.633308,
     cep: '',
-    whatsappNumber: ''
+    whatsappNumber: '',
+    openingTime: '10:00',
+    closingTime: '23:00'
   });
   const [coupons, setCoupons] = useState<Coupon[]>([]);
   const [newCoupon, setNewCoupon] = useState({ 
@@ -38,7 +40,9 @@ const AdminSettings: React.FC = () => {
     setLoading(true);
     try {
       const [conf, coup] = await Promise.all([getRestaurantConfig(), getCoupons()]);
-      if (conf) setConfig(conf);
+      if (conf) {
+        setConfig(prev => ({ ...prev, ...conf }));
+      }
       setCoupons(coup);
     } catch (err) {
       console.error(err);
@@ -227,6 +231,27 @@ const AdminSettings: React.FC = () => {
                 <p className="text-[10px] text-slate-400 font-bold mt-2 ml-1">
                   Digite apenas números, incluindo código do país e DDD (ex: 5511999999999)
                 </p>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Horário de Abertura</label>
+                  <input 
+                    type="time" 
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
+                    value={config.openingTime || '10:00'} 
+                    onChange={e => setConfig({...config, openingTime: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Horário de Fechamento</label>
+                  <input 
+                    type="time" 
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
+                    value={config.closingTime || '23:00'} 
+                    onChange={e => setConfig({...config, closingTime: e.target.value})} 
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4 p-6 bg-slate-50 rounded-[2rem] border border-slate-200">
