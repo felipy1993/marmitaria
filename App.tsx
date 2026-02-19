@@ -2,6 +2,7 @@
 import React, { useState, createContext, useContext, useEffect } from 'react';
 import { HashRouter, Routes, Route, Navigate } from 'react-router-dom';
 import Store from './pages/Store';
+import { ToastProvider } from './components/Toast';
 import AdminLogin from './pages/AdminLogin';
 import AdminDashboard from './pages/AdminDashboard';
 import AdminProducts from './pages/AdminProducts';
@@ -89,7 +90,8 @@ const App: React.FC = () => {
 
   return (
     <CartContext.Provider value={{ items, addToCart, updateCartItem, removeFromCart, clearCart, total }}>
-      <HashRouter>
+      <ToastProvider>
+        <HashRouter>
         <Routes>
           <Route path="/" element={<Store />} />
           <Route path="/admin/login" element={<AdminLogin />} />
@@ -101,6 +103,7 @@ const App: React.FC = () => {
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
       </HashRouter>
+     </ToastProvider>
     </CartContext.Provider>
   );
 };

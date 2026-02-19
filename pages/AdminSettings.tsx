@@ -7,9 +7,11 @@ import {
   Save, Plus, Trash2, Tag, Truck, MapPin, Search, Loader2, Coins, Target, Eye
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { useToast } from '../components/Toast';
 
 const AdminSettings: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [config, setConfig] = useState<RestaurantConfig>({
     deliveryRadiusKm: 10,
     deliveryFee: 5,
@@ -54,7 +56,7 @@ const AdminSettings: React.FC = () => {
 
   const fetchCoordinates = async () => {
     if (!config.addressBase && !config.cep) {
-      alert("Preencha o CEP ou Endereço da loja para buscar as coordenadas.");
+      showToast("Preencha o CEP ou Endereço da loja para buscar as coordenadas.", "info");
       return;
     }
 
@@ -70,12 +72,12 @@ const AdminSettings: React.FC = () => {
           latitude: parseFloat(data[0].lat),
           longitude: parseFloat(data[0].lon)
         }));
-        alert("Coordenadas atualizadas com sucesso com base no mapa!");
+        showToast("Coordenadas atualizadas com sucesso com base no mapa!", "success");
       } else {
-        alert("Não encontramos coordenadas para este endereço. Tente ser mais específico.");
+        showToast("Não encontramos coordenadas para este endereço. Tente ser mais específico.", "error");
       }
     } catch (err) {
-      alert("Erro ao buscar coordenadas no serviço de mapa.");
+      showToast("Erro ao buscar coordenadas no serviço de mapa.", "error");
     } finally {
       setIsFetchingGeo(false);
     }
@@ -85,9 +87,9 @@ const AdminSettings: React.FC = () => {
     e.preventDefault();
     try {
       await updateRestaurantConfig(config);
-      alert('Configurações salvas!');
+      showToast('Configurações salvas!', "success");
     } catch (err) {
-      alert('Erro ao salvar configurações.');
+      showToast('Erro ao salvar configurações.', "error");
     }
   };
 
@@ -100,11 +102,24 @@ const AdminSettings: React.FC = () => {
         active: true,
         usedCount: 0 
       });
+      showToast(`Cupom ${newCoupon.code} criado com sucesso!`, "success");
       setNewCoupon({ code: '', discountPercentage: 10, minOrderValue: 0, availableQuantity: 100 });
       const coup = await getCoupons();
       setCoupons(coup);
     } catch (err) {
-      alert('Erro ao criar cupom.');
+      showToast('Erro ao criar cupom.', "error");
+    }
+  };
+
+  const handleDeleteCoupon = async (id: string, code: string) => {
+    if (window.confirm(`Deseja realmente excluir o cupom ${code}?`)) {
+      try {
+        await deleteCoupon(id);
+        showToast(`Cupom ${code} excluído.`, "info");
+        loadData();
+      } catch (err) {
+        showToast('Erro ao excluir cupom.', "error");
+      }
     }
   };
 
@@ -121,7 +136,7 @@ const AdminSettings: React.FC = () => {
          if (!data.erro) {
            const address = `${data.logradouro}, , ${data.bairro}, ${data.localidade} - ${data.uf}`;
            setConfig(prev => ({ ...prev, addressBase: address }));
-           alert("Endereço base encontrado! Por favor, adicione o NÚMERO no campo de endereço para calcular as coordenadas com precisão.");
+           showToast("Endereço base encontrado! Por favor, adicione o NÚMERO no campo de endereço para calcular as coordenadas com precisão.", "info");
          }
        } catch (err) {
          console.error("Erro ao buscar CEP", err);
@@ -328,7 +343,7 @@ const AdminSettings: React.FC = () => {
                        <p className="text-[10px] font-bold text-slate-500 flex items-center gap-1"><Target size={10}/> Disponível: {coupon.availableQuantity - (coupon.usedCount || 0)} / {coupon.availableQuantity}</p>
                     </div>
                   </div>
-                  <button onClick={async () => { if(confirm('Excluir cupom?')) { await deleteCoupon(coupon.id!); loadData(); } }} className="text-slate-300 hover:text-red-500 p-2 relative z-10">
+                  <button onClick={() => handleDeleteCoupon(coupon.id!, coupon.code)} className="text-slate-300 hover:text-red-500 p-2 relative z-10">
                     <Trash2 size={20} />
                   </button>
                   <div className="absolute top-0 right-0 h-full w-1 bg-orange-500/10"></div>

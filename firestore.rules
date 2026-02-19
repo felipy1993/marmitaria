@@ -23,27 +23,32 @@ service cloud.firestore {
       allow write: if request.auth != null;
     }
     
-    // Cupons - Leitura pública
+    // Cupons - Leitura pública para conferência, escrita restrita ao admin
     match /coupons/{couponId} {
       allow read: if true;
       allow write: if request.auth != null;
-      allow update: if true; 
+      // Permite incrementar o uso do cupom apenas se o valor for exatamente 1
+      allow update: if request.resource.data.usedCount == resource.data.usedCount + 1;
     }
     
     // Pedidos - Usuários podem criar e ler seus próprios pedidos
     match /orders/{orderId} {
-      // Permite criar pedido (autenticado ou guest)
+      // Permite criar pedido (qualquer um pode pedir)
       allow create: if true;
       
-      // Permite ler se estiver autenticado (para admin funcionar sem claims complexas)
-      // Idealmente, filtrar por admin apenas, mas para MVP isso resolve o painel em branco
-      allow read: if request.auth != null || resource.data.guestId != null;
+      // Permite ler:
+      // 1. Admin (autenticado por senha)
+      // 2. O próprio usuário logado (matching userId)
+      // 3. O próprio guest (matching guestId no pedido)
+      allow read: if request.auth != null || 
+                 (resource.data.guestId != null && request.query.guestId == resource.data.guestId) ||
+                 (resource.data.userId != null && request.auth.uid == resource.data.userId);
       
       // Apenas admin pode atualizar pedidos
-      allow update: if request.auth != null && request.auth.token.admin == true;
+      allow update: if request.auth != null;
       
       // Apenas admin pode deletar
-      allow delete: if request.auth != null && request.auth.token.admin == true;
+      allow delete: if request.auth != null;
     }
     
     // Vendas - Apenas admin

@@ -9,6 +9,7 @@ import {
 } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { auth, googleProvider } from '../firebase-config';
+import { useToast } from '../components/Toast';
 import { signInWithPopup, onAuthStateChanged, User as FirebaseUser, signOut } from 'firebase/auth';
 
 // Novos componentes refatorados
@@ -35,6 +36,8 @@ const INITIAL_FORM_DATA = {
 
 const Store: React.FC = () => {
   const navigate = useNavigate();
+  const { items, addToCart, updateCartItem, removeFromCart, clearCart, total: subtotal } = useCart();
+  const { showToast } = useToast();
   const [products, setProducts] = useState<Product[]>([]);
   const [config, setConfig] = useState<RestaurantConfig | null>(null);
   const [coupons, setCoupons] = useState<Coupon[]>([]);
@@ -81,7 +84,6 @@ const Store: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  const { items, addToCart, updateCartItem, removeFromCart, clearCart, total: subtotal } = useCart();
 
   const formatImageUrl = (url?: string) => {
     if (!url) return null;
@@ -438,7 +440,7 @@ const Store: React.FC = () => {
       else storeTrulyOpen = currentStr >= config.openingTime || currentStr <= config.closingTime;
     }
     if (!storeTrulyOpen) {
-      alert(`Desculpe, a loja fechou agora pouco. Nosso horário de atendimento é das ${config?.openingTime} às ${config?.closingTime}.`);
+      showToast(`Desculpe, a loja fechou agora pouco. Nosso horário de atendimento é das ${config?.openingTime} às ${config?.closingTime}.`, 'error');
       return;
     }
     
@@ -476,12 +478,13 @@ const Store: React.FC = () => {
       setOrderSuccess(docRef.id);
       setTrackingOrderId(docRef.id);
       localStorage.setItem('trackingOrderId', docRef.id);
+      showToast('Pedido enviado com sucesso! 🎉');
       clearCart();
       setIsCheckoutOpen(false);
       setAppliedCoupon(null);
     } catch (err) {
       console.error("Erro Checkout:", err);
-      alert('Houve uma falha ao processar seu pedido.');
+      showToast('Houve uma falha ao processar seu pedido.', 'error');
     }
   };
 
@@ -517,7 +520,7 @@ const Store: React.FC = () => {
             </Link>
             
             <div 
-              onClick={() => items.length > 0 ? setIsCheckoutOpen(true) : alert("Adicione itens à sacola para definir o endereço.")}
+              onClick={() => items.length > 0 ? setIsCheckoutOpen(true) : showToast("Adicione itens à sacola para definir o endereço.", 'info')}
               className={`hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100 ml-4 max-w-xs truncate transition-colors ${items.length > 0 ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`}
             >
               <MapPin size={14} className="text-orange-500 shrink-0" />

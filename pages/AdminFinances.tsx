@@ -10,9 +10,11 @@ import {
   ChevronRight, ArrowUpRight, ArrowDownLeft, Wallet, Receipt, X, ClipboardList, Eye
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { useToast } from '../components/Toast';
 
 const AdminFinances: React.FC = () => {
   const navigate = useNavigate();
+  const { showToast } = useToast();
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState<Order[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -105,11 +107,24 @@ const AdminFinances: React.FC = () => {
         ...newEntry,
         date: Date.now()
       });
+      showToast('Lançamento realizado com sucesso!', "success");
       setIsModalOpen(false);
       loadData();
       setNewEntry({ description: '', amount: 0, type: 'expense', category: 'Geral' });
     } catch (err) {
-      alert('Erro ao salvar lançamento');
+      showToast('Erro ao salvar lançamento', "error");
+    }
+  };
+
+  const handleDeleteTransaction = async (id: string, description: string) => {
+    if (window.confirm(`Deseja realmente excluir o lançamento "${description}"?`)) {
+      try {
+        await deleteTransaction(id);
+        showToast('Lançamento excluído.', "info");
+        loadData();
+      } catch (err) {
+        showToast('Erro ao excluir lançamento.', "error");
+      }
     }
   };
 
@@ -260,7 +275,7 @@ const AdminFinances: React.FC = () => {
                            {t.type === 'income' ? '+' : '-'} R$ {t.amount.toFixed(2)}
                         </td>
                         <td className="px-8 py-6 text-center">
-                           <button onClick={async () => { if(confirm('Excluir lançamento?')) { await deleteTransaction(t.id!); loadData(); } }} className="text-slate-300 hover:text-red-500 p-2">
+                           <button onClick={() => handleDeleteTransaction(t.id!, t.description)} className="text-slate-300 hover:text-red-500 p-2">
                              <Trash2 size={16} />
                            </button>
                         </td>
