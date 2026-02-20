@@ -16,6 +16,7 @@ interface CheckoutModalProps {
   setDeliveryType: (val: 'delivery' | 'pickup') => void;
   setFormData: (val: any) => void;
   onCepChange: (cep: string) => void;
+  onGetLocation: () => void;
   setCashAmount: (val: string) => void;
   onCheckout: (e: React.FormEvent) => void;
 }
@@ -33,6 +34,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
   setDeliveryType,
   setFormData,
   onCepChange,
+  onGetLocation,
   setCashAmount,
   onCheckout
 }) => {
@@ -113,8 +115,18 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Onde Entregar</h4>
                   </div>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-4">CEP</label>
+                    <div className="space-y-2">
+                      <div className="flex justify-between items-center ml-4">
+                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">CEP</label>
+                        <button 
+                          type="button" 
+                          onClick={onGetLocation}
+                          className="flex items-center gap-1.5 text-[10px] font-black text-orange-500 uppercase tracking-wider hover:text-orange-600 transition-colors"
+                        >
+                          <MapPin size={12} />
+                          Usar minha localização
+                        </button>
+                      </div>
                       <div className="relative">
                         <input required={deliveryType === 'delivery'} className="w-full px-6 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none focus:border-orange-500 transition-all placeholder:text-slate-300" placeholder="00000-000" value={formData.cep} onChange={e => onCepChange(e.target.value)} />
                         {isSearchingCep && <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 animate-spin text-orange-500" size={16} />}

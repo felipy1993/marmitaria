@@ -57,6 +57,10 @@ const Store: React.FC = () => {
   const [isOutsideRadius, setIsOutsideRadius] = useState(false);
   
   const [isMyOrdersOpen, setIsMyOrdersOpen] = useState(false);
+  const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
+  const [hasChosenGuest, setHasChosenGuest] = useState(() => localStorage.getItem('hasChosenGuest') === 'true');
+  const [pendingProduct, setPendingProduct] = useState<Product | null>(null);
+  const [isCartBouncing, setIsCartBouncing] = useState(false);
   const [myOrders, setMyOrders] = useState<Order[]>([]);
   const [guestId] = useState(() => {
     let id = localStorage.getItem('guestId');
@@ -237,6 +241,54 @@ const Store: React.FC = () => {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
   };
 
+  const handleGetLocation = () => {
+    if (!navigator.geolocation) {
+      showToast('Seu navegador não suporta geolocalização.', 'error');
+      return;
+    }
+
+    setIsSearchingCep(true);
+    navigator.geolocation.getCurrentPosition(async (position) => {
+      try {
+        const { latitude, longitude } = position.coords;
+        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`);
+        const data = await res.json();
+        
+        if (data && data.address) {
+          const { postcode, road, suburb, city, town, village } = data.address;
+          const cleanCep = postcode ? postcode.replace(/\D/g, '') : '';
+          
+          setFormData(prev => ({
+            ...prev,
+            cep: cleanCep,
+            street: road || '',
+            neighborhood: suburb || '',
+            city: city || town || village || ''
+          }));
+
+          if (config?.latitude && config?.longitude) {
+            const distance = calculateDistance(config.latitude, config.longitude, latitude, longitude);
+            setDeliveryDistance(distance);
+            if (distance > (config.deliveryRadiusKm || 10)) setIsOutsideRadius(true);
+            else setIsOutsideRadius(false);
+          }
+
+          showToast('Localização detectada com sucesso!', 'success');
+        } else {
+          showToast('Não foi possível obter o endereço exato.', 'info');
+        }
+      } catch (err) {
+        console.error('Erro Geolocation:', err);
+        showToast('Falha ao obter endereço via GPS.', 'error');
+      } finally {
+        setIsSearchingCep(false);
+      }
+    }, (err) => {
+      setIsSearchingCep(false);
+      showToast('Acesso à localização negado ou falhou.', 'error');
+    }, { enableHighAccuracy: true });
+  };
+
   const handleCepChange = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, '');
     setFormData(prev => ({ ...prev, cep: cleanCep }));
@@ -364,7 +416,11 @@ const Store: React.FC = () => {
     };
 
     if (editingCartItemId) updateCartItem(editingCartItemId, itemData);
-    else addToCart(itemData);
+    else {
+      addToCart(itemData);
+      setIsCartBouncing(true);
+      setTimeout(() => setIsCartBouncing(false), 300);
+    }
     
     setCustomizingProduct(null);
     setEditingCartItemId(null);
@@ -415,6 +471,50 @@ const Store: React.FC = () => {
     if (isMyOrdersOpen) loadMyOrders();
   }, [isMyOrdersOpen, currentUser, guestId]);
 
+  const handleProductClick = (product: Product) => {
+    if (!isStoreOpen) {
+      showToast('Loja fechada no momento.', 'error');
+      return;
+    }
+
+    if (!currentUser && !hasChosenGuest) {
+      setPendingProduct(product);
+      setIsAuthPromptOpen(true);
+      return;
+    }
+
+    if (product.optionsGroups?.length) {
+      handleOpenCustomization(product);
+    } else {
+      handleAddAction(product);
+    }
+  };
+
+  const handleContinueAsGuest = () => {
+    setHasChosenGuest(true);
+    localStorage.setItem('hasChosenGuest', 'true');
+    setIsAuthPromptOpen(false);
+    if (pendingProduct) {
+      if (pendingProduct.optionsGroups?.length) handleOpenCustomization(pendingProduct);
+      else handleAddAction(pendingProduct);
+      setPendingProduct(null);
+    }
+  };
+
+  const handleAuthPromptLogin = async () => {
+    try {
+      await handleGoogleLogin();
+      setIsAuthPromptOpen(false);
+      if (pendingProduct) {
+        if (pendingProduct.optionsGroups?.length) handleOpenCustomization(pendingProduct);
+        else handleAddAction(pendingProduct);
+        setPendingProduct(null);
+      }
+    } catch (err) {
+      console.error("Erro ao logar via prompt:", err);
+    }
+  };
+
   const handleAddAction = (product: Product) => {
     addToCart({
       productId: `${product.id || 'temp'}-${Date.now()}`,
@@ -425,6 +525,8 @@ const Store: React.FC = () => {
       observation: '',
       restaurantId: product.restaurantId
     });
+    setIsCartBouncing(true);
+    setTimeout(() => setIsCartBouncing(false), 300);
     setIsCartOpen(true);
   };
 
@@ -557,11 +659,13 @@ const Store: React.FC = () => {
               <button onClick={handleGoogleLogin} className="text-xs font-black text-orange-500 uppercase tracking-widest px-4 py-2 hover:bg-orange-50 rounded-lg transition-all">Entrar</button>
             )}
 
-            <button onClick={() => setIsCartOpen(true)} className="relative p-2.5 rounded-xl hover:bg-slate-50 transition-all group">
-              <ShoppingCart size={22} className="text-slate-700 group-hover:text-orange-500 transition-colors" />
-              {items.length > 0 && <span className="absolute top-0 right-0 bg-orange-500 text-white text-[9px] font-black min-w-[18px] h-[18px] flex items-center justify-center rounded-full ring-2 ring-white">
-                {items.reduce((acc, i) => acc + i.quantity, 0)}
-              </span>}
+            <button onClick={() => setIsCartOpen(true)} className={`relative p-2.5 rounded-xl transition-all group ${isCartBouncing ? 'animate-bounce-sm' : 'hover:bg-slate-50'}`}>
+              <ShoppingCart size={22} className={`transition-colors ${items.length > 0 ? 'text-orange-500' : 'text-slate-700 group-hover:text-orange-500'}`} />
+              {items.length > 0 && (
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-[9px] font-black min-w-[20px] h-[20px] flex items-center justify-center rounded-full ring-2 ring-white shadow-sm">
+                  {items.reduce((acc, i) => acc + i.quantity, 0)}
+                </span>
+              )}
             </button>
 
             <button onClick={() => setIsMyOrdersOpen(true)} className="flex items-center gap-2 p-2.5 rounded-xl hover:bg-orange-50 text-slate-700 hover:text-orange-500 transition-all group">
@@ -572,9 +676,12 @@ const Store: React.FC = () => {
       </header>
 
       {!isStoreOpen && (
-        <div className="bg-red-500 text-white font-black py-4 px-6 text-center animate-pulse sticky top-[64px] md:top-[80px] z-[55]">
+        <div className="bg-red-500 text-white font-black py-3 px-6 text-center sticky top-[64px] md:top-[80px] z-[55] shadow-lg">
           <div className="max-w-6xl mx-auto flex items-center justify-center gap-3">
-            <Clock size={20} /><p className="text-sm uppercase tracking-widest">Loja Fechada no Momento • Horário: {config?.openingTime} às {config?.closingTime}</p>
+            <div className="p-1 px-2 bg-white/20 rounded-lg backdrop-blur-sm">
+              <Clock size={16} />
+            </div>
+            <p className="text-[11px] md:text-xs uppercase tracking-[0.2em]">Loja Fechada no Momento • Abrimos às {config?.openingTime}</p>
           </div>
         </div>
       )}
@@ -602,10 +709,18 @@ const Store: React.FC = () => {
           </div>
         )}
 
-        <section className="bg-white border-b border-slate-50 py-4 px-4">
+        <section className="bg-white border-b border-slate-50 py-6 px-4">
              <div className="max-w-2xl mx-auto relative group">
-                <div className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-red-500 transition-all pointer-events-none"><Search size={18} /></div>
-                <input type="text" placeholder="Busque por pratos ou categorias" className="w-full pl-12 pr-4 py-3 bg-slate-100 border-none rounded-lg focus:bg-white focus:ring-1 focus:ring-slate-200 transition-all text-sm font-medium placeholder:text-slate-400" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} />
+                <div className="absolute left-5 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-orange-500 transition-all pointer-events-none">
+                  <Search size={20} />
+                </div>
+                <input 
+                  type="text" 
+                  placeholder="Busque por pratos ou categorias" 
+                  className="w-full pl-14 pr-6 py-4 bg-slate-100/50 border-2 border-transparent rounded-2xl focus:bg-white focus:border-orange-100 focus:ring-4 focus:ring-orange-500/5 transition-all text-sm font-bold placeholder:text-slate-400 placeholder:font-medium" 
+                  value={searchTerm} 
+                  onChange={(e) => setSearchTerm(e.target.value)} 
+                />
             </div>
         </section>
 
@@ -619,7 +734,19 @@ const Store: React.FC = () => {
 
           {loading ? (
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-              {[1, 2, 3, 4].map(i => <div key={i} className="h-32 bg-white rounded-xl animate-pulse border border-slate-100" />)}
+              {[1, 2, 3, 4].map(i => (
+                <div key={i} className="h-32 md:h-36 bg-white rounded-3xl animate-pulse border border-slate-100 flex p-4 gap-4">
+                  <div className="flex-1 space-y-3">
+                    <div className="h-5 bg-slate-100 rounded-lg w-3/4"></div>
+                    <div className="space-y-2">
+                       <div className="h-3 bg-slate-50 rounded-lg w-full"></div>
+                       <div className="h-3 bg-slate-50 rounded-lg w-2/3"></div>
+                    </div>
+                    <div className="h-6 bg-slate-100 rounded-lg w-1/4 mt-auto"></div>
+                  </div>
+                  <div className="w-24 h-24 md:w-28 md:h-28 bg-slate-100 rounded-2xl shrink-0"></div>
+                </div>
+              ))}
             </div>
           ) : filteredProducts.length === 0 ? (
             <div className="py-20 text-center space-y-4">
@@ -633,7 +760,7 @@ const Store: React.FC = () => {
                   key={product.id} 
                   product={product} 
                   isStoreOpen={isStoreOpen} 
-                  onClick={(p) => isStoreOpen ? (p.optionsGroups?.length ? handleOpenCustomization(p) : handleAddAction(p)) : alert('Loja fechada no momento.')} 
+                  onClick={handleProductClick} 
                 />
               ))}
             </div>
@@ -709,6 +836,7 @@ const Store: React.FC = () => {
           setDeliveryType={setDeliveryType}
           setFormData={setFormData}
           onCepChange={handleCepChange}
+          onGetLocation={handleGetLocation}
           setCashAmount={setCashAmount}
           onCheckout={handleCheckout}
         />
@@ -729,6 +857,36 @@ const Store: React.FC = () => {
           onClose={() => setIsMyOrdersOpen(false)}
           onViewDetails={(order) => { setActiveOrder(order); setOrderSuccess(order.id!); setIsMyOrdersOpen(false); }}
         />
+      )}
+
+      {isAuthPromptOpen && (
+        <div className="fixed inset-0 z-[200] flex items-center justify-center p-4">
+          <div className="absolute inset-0 bg-slate-900/60 backdrop-blur-xl animate-fade-in" onClick={() => setIsAuthPromptOpen(false)}></div>
+          <div className="relative bg-white rounded-[3rem] shadow-2xl w-full max-w-lg p-10 text-center animate-scale-in border border-white/20">
+             <div className="w-20 h-20 bg-orange-100 rounded-3xl flex items-center justify-center mx-auto mb-6 text-orange-500 shadow-sm animate-float">
+                <ShoppingBag size={40} />
+             </div>
+             <h2 className="text-3xl font-black text-slate-900 mb-2 leading-tight">Olá! Que bom ter você aqui.</h2>
+             <p className="text-slate-400 font-bold mb-10 leading-relaxed text-sm px-4">Deseja entrar com sua conta Google para salvar seus pedidos ou prefere continuar como visitante?</p>
+             
+             <div className="space-y-4">
+                <button 
+                  onClick={handleAuthPromptLogin}
+                  className="w-full py-5 bg-slate-900 text-white font-black rounded-2xl flex items-center justify-center gap-3 hover:bg-slate-800 transition-all active:scale-95 shadow-xl shadow-slate-200"
+                >
+                  <img src="https://www.gstatic.com/firebasejs/ui/2.0.0/images/auth/google.svg" className="w-5 h-5" alt="Google" />
+                  Entrar com Google
+                </button>
+                <button 
+                  onClick={handleContinueAsGuest}
+                  className="w-full py-5 bg-white text-slate-500 font-black rounded-2xl border-2 border-slate-100 hover:border-orange-500 hover:text-orange-500 transition-all active:scale-95"
+                >
+                  Continuar sem logar
+                </button>
+             </div>
+             <p className="mt-8 text-[10px] font-bold text-slate-300 uppercase tracking-widest cursor-pointer hover:text-slate-400" onClick={() => setIsAuthPromptOpen(false)}>Agora não, só quero olhar</p>
+          </div>
+        </div>
       )}
 
       {/* Botão Flutuante da Sacola */}
