@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getActiveProducts, createOrder, getRestaurantConfig, getCoupons, subscribeToOrder, incrementCouponUsage, getCustomerOrders } from '../services/database';
+import { getActiveProducts, createOrder, getRestaurantConfig, getCoupons, subscribeToOrder, incrementCouponUsage, getCustomerOrders, subscribeToRestaurantConfig } from '../services/database';
 import { Product, PaymentMethod, OptionGroup, SelectedOption, Order, OrderStatus, RestaurantConfig, Coupon, OrderItem } from '../types';
 import { useCart } from '../App';
 import { 
@@ -21,6 +21,7 @@ import MyOrdersModal from '../components/Store/MyOrdersModal';
 import ProductCard from '../components/Store/ProductCard';
 import CategoryBar from '../components/Store/CategoryBar';
 import Receipt from '../components/Store/Receipt';
+import AddressModal from '../components/Store/AddressModal';
 
 const INITIAL_FORM_DATA = {
   customerName: '',
@@ -48,13 +49,17 @@ const Store: React.FC = () => {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
 
   const [isCartOpen, setIsCartOpen] = useState(false);
+  const [isAddressModalOpen, setIsAddressModalOpen] = useState(false);
   const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Marmitas');
   const [isSearchingCep, setIsSearchingCep] = useState(false);
   const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
-  const [isOutsideRadius, setIsOutsideRadius] = useState(false);
+  const isOutsideRadius = useMemo(() => {
+    if (deliveryDistance === null || !config) return false;
+    return deliveryDistance > (config.deliveryRadiusKm || 10);
+  }, [deliveryDistance, config]);
   
   const [isMyOrdersOpen, setIsMyOrdersOpen] = useState(false);
   const [isAuthPromptOpen, setIsAuthPromptOpen] = useState(false);
@@ -196,16 +201,21 @@ const Store: React.FC = () => {
     }
   }, [trackingOrderId]);
 
+  useEffect(() => {
+    const unsubscribe = subscribeToRestaurantConfig((conf) => {
+      setConfig(conf);
+    });
+    return () => unsubscribe();
+  }, []);
+
   const loadInitialData = async () => {
     setLoading(true);
     try {
-      const [prods, conf, coups] = await Promise.all([
+      const [prods, coups] = await Promise.all([
         getActiveProducts(),
-        getRestaurantConfig(),
         getCoupons()
       ]);
       setProducts(prods);
-      setConfig(conf);
       setCoupons(coups);
     } catch (err) {
       console.error("Erro ao carregar dados da loja:", err);
@@ -269,8 +279,6 @@ const Store: React.FC = () => {
           if (config?.latitude && config?.longitude) {
             const distance = calculateDistance(config.latitude, config.longitude, latitude, longitude);
             setDeliveryDistance(distance);
-            if (distance > (config.deliveryRadiusKm || 10)) setIsOutsideRadius(true);
-            else setIsOutsideRadius(false);
           }
 
           showToast('Localização detectada com sucesso!', 'success');
@@ -294,7 +302,6 @@ const Store: React.FC = () => {
     setFormData(prev => ({ ...prev, cep: cleanCep }));
     if (cleanCep.length === 8) {
       setIsSearchingCep(true);
-      setIsOutsideRadius(false);
       try {
         const viaCepRes = await fetch(`https://viacep.com.br/ws/${cleanCep}/json/`);
         const viaCepData = await viaCepRes.json();
@@ -311,7 +318,6 @@ const Store: React.FC = () => {
           if (geoData?.[0] && config?.latitude && config?.longitude) {
             const distance = calculateDistance(config.latitude, config.longitude, parseFloat(geoData[0].lat), parseFloat(geoData[0].lon));
             setDeliveryDistance(distance);
-            if (distance > (config.deliveryRadiusKm || 10)) setIsOutsideRadius(true);
           }
           document.getElementById('address-number')?.focus();
         } else alert('CEP não encontrado.');
@@ -622,8 +628,8 @@ const Store: React.FC = () => {
             </Link>
             
             <div 
-              onClick={() => items.length > 0 ? setIsCheckoutOpen(true) : showToast("Adicione itens à sacola para definir o endereço.", 'info')}
-              className={`hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100 ml-4 max-w-xs truncate transition-colors ${items.length > 0 ? 'cursor-pointer hover:bg-slate-100' : 'cursor-default'}`}
+              onClick={() => setIsAddressModalOpen(true)}
+              className={`hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100 ml-4 max-w-xs truncate transition-colors cursor-pointer hover:bg-slate-100 shadow-sm`}
             >
               <MapPin size={14} className="text-orange-500 shrink-0" />
               <span className="text-xs font-bold text-slate-600 truncate">
@@ -900,6 +906,18 @@ const Store: React.FC = () => {
               <div className="flex items-center gap-3"><span className="font-black text-lg">R$ {subtotal.toFixed(2)}</span><ChevronRight size={20} className="group-hover:translate-x-1 transition-transform" /></div>
            </button>
         </div>
+      )}
+
+      {isAddressModalOpen && (
+        <AddressModal 
+          formData={formData}
+          isSearchingCep={isSearchingCep}
+          isOutsideRadius={isOutsideRadius}
+          onClose={() => setIsAddressModalOpen(false)}
+          onCepChange={handleCepChange}
+          onGetLocation={handleGetLocation}
+          setFormData={setFormData}
+        />
       )}
 
       <Receipt activeOrder={activeOrder} />

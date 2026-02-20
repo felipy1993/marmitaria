@@ -176,6 +176,15 @@ export const updateRestaurantConfig = async (config: RestaurantConfig) => {
   return await setDoc(configRef, config);
 };
 
+export const subscribeToRestaurantConfig = (callback: (config: RestaurantConfig) => void) => {
+  const configRef = doc(db, CONFIG_COLLECTION, DEFAULT_RESTAURANT_ID);
+  return onSnapshot(configRef, (snapshot) => {
+    if (snapshot.exists()) {
+      callback(snapshot.data() as RestaurantConfig);
+    }
+  });
+};
+
 // Coupons API
 export const getCoupons = async (): Promise<Coupon[]> => {
   const q = query(collection(db, COUPONS_COLLECTION), orderBy('createdAt', 'desc'));

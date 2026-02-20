@@ -239,11 +239,23 @@ const AdminSettings: React.FC = () => {
               <div className="grid grid-cols-2 gap-4 p-6 bg-slate-50 rounded-[2rem] border border-slate-200">
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Latitude</label>
-                  <input readOnly className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0" value={config.latitude} />
+                  <input 
+                    type="number"
+                    step="0.000001"
+                    className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0 p-0" 
+                    value={config.latitude} 
+                    onChange={e => setConfig({...config, latitude: parseFloat(e.target.value)})}
+                  />
                 </div>
                 <div>
                   <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Longitude</label>
-                  <input readOnly className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0" value={config.longitude} />
+                  <input 
+                    type="number"
+                    step="0.000001"
+                    className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0 p-0" 
+                    value={config.longitude} 
+                    onChange={e => setConfig({...config, longitude: parseFloat(e.target.value)})}
+                  />
                 </div>
               </div>
 

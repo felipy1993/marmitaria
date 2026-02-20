@@ -244,7 +244,7 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                <div className="pt-6">
                  <button 
                    type="submit" 
-                   disabled={!isStoreOpen || (deliveryType === 'delivery' && (isOutsideRadius || !formData.street)) || !formData.customerName || !formData.phone}
+                   disabled={!isStoreOpen || (deliveryType === 'delivery' && (isOutsideRadius || !formData.street || !formData.number)) || !formData.customerName || !formData.phone}
                    className="w-full py-7 bg-gradient-to-r from-orange-500 to-red-600 text-white font-black text-xl rounded-[2.5rem] shadow-2xl shadow-orange-500/40 hover:scale-[1.02] active:scale-95 transition-all flex items-center justify-center gap-4 disabled:opacity-30 disabled:grayscale"
                  >
                    {!isStoreOpen ? 'Loja Fechada no Momento' : (isOutsideRadius ? 'Fora do Raio de Entrega' : 'Confirmar e Enviar Pedido')}
