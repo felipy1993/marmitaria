@@ -74,25 +74,33 @@ export const createOrder = async (order: Omit<Order, 'id' | 'createdAt' | 'statu
 };
 
 export const getCustomerOrders = async (identifier: { userId?: string, guestId?: string }): Promise<Order[]> => {
-  let q;
+  const orders: Order[] = [];
+  const promises: Promise<any>[] = [];
+
   if (identifier.userId) {
-    q = query(
+    const qUser = query(
       collection(db, ORDERS_COLLECTION),
-      where('userId', '==', identifier.userId),
-      orderBy('createdAt', 'desc')
+      where('userId', '==', identifier.userId)
     );
-  } else if (identifier.guestId) {
-    q = query(
-      collection(db, ORDERS_COLLECTION),
-      where('guestId', '==', identifier.guestId),
-      orderBy('createdAt', 'desc')
-    );
-  } else {
-    return [];
+    promises.push(getDocs(qUser));
   }
-  
-  const snapshot = await getDocs(q);
-  return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() } as Order));
+
+  if (identifier.guestId) {
+    const qGuest = query(
+      collection(db, ORDERS_COLLECTION),
+      where('guestId', '==', identifier.guestId)
+    );
+    promises.push(getDocs(qGuest));
+  }
+
+  const snapshots = await Promise.all(promises);
+  const allOrders = snapshots.flatMap(snapshot => 
+    snapshot.docs.map((doc: any) => ({ id: doc.id, ...doc.data() } as Order))
+  );
+
+  // Remove duplicados (caso um pedido tenha tanto userId quanto guestId) e ordena
+  const uniqueOrders = Array.from(new Map(allOrders.map(o => [o.id, o])).values());
+  return uniqueOrders.sort((a, b) => b.createdAt - a.createdAt);
 };
 
 export const getOrdersByPeriod = async (start: number, end: number): Promise<Order[]> => {

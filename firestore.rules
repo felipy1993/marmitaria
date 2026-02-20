@@ -46,7 +46,7 @@ service cloud.firestore {
       // 1. O próprio Admin da loja
       // 2. O cliente que fez o pedido (via GuestId ou UID)
       allow read: if isAdmin() || 
-                 (resource.data.guestId != null && request.query.guestId == resource.data.guestId) ||
+                 (resource.data.guestId != null) ||
                  (request.auth != null && request.auth.uid == resource.data.userId);
       
       // Apenas Admin pode atualizar (mudar status) ou deletar pedidos

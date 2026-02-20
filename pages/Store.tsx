@@ -469,7 +469,10 @@ const Store: React.FC = () => {
 
   const loadMyOrders = async () => {
     try {
-      const orders = await getCustomerOrders(currentUser ? { userId: currentUser.uid } : { guestId });
+      const orders = await getCustomerOrders({ 
+        userId: currentUser?.uid, 
+        guestId 
+      });
       setMyOrders(orders);
     } catch (err: any) {
       console.error("Erro ao carregar pedidos:", err);
