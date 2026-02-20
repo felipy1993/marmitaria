@@ -36,9 +36,9 @@ const AdminOrders: React.FC = () => {
       const cleanPhone = order.phone.replace(/\D/g, '');
       let message = '';
       if (status === OrderStatus.PREPARING) {
-        message = `Olá *${order.customerName}*! 👋\n\nSeu pedido na *Sabor de Casa* entrou em preparo! 🍱🔥`;
+        message = `Olá *${order.customerName}*! \uD83D\uDC4B\n\nSeu pedido na *Sabor de Casa* entrou em preparo! \uD83C\uDF71\uD83D\uDD25`;
       } else if (status === OrderStatus.DELIVERING) {
-        message = `Olá *${order.customerName}*! 👋\n\nSeu pedido *saiu para entrega*! 🛵💨`;
+        message = `Olá *${order.customerName}*! \uD83D\uDC4B\n\nSeu pedido *saiu para entrega*! \uD83D\uDEF5\uD83D\uDCA8`;
       }
       if (message) {
         window.open(`https://wa.me/55${cleanPhone}?text=${encodeURIComponent(message)}`, '_blank');
