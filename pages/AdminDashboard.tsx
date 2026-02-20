@@ -4,7 +4,7 @@ import { subscribeToOrders, getAllProducts, getOrdersByPeriod, getTransactionsBy
 import { Order, OrderStatus, Product, Transaction } from '../types';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
-  TrendingUp, Activity, Wallet, PieChart, ArrowUpRight, ArrowDownRight,
+  TrendingUp, Activity, Wallet, ArrowUpRight, ArrowDownRight,
   ClipboardList, ChevronRight, ShoppingBag, LayoutPanelLeft, BarChart3, PieChart as PieChartIcon, Target
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
