@@ -629,13 +629,13 @@ const Store: React.FC = () => {
             
             <div 
               onClick={() => setIsAddressModalOpen(true)}
-              className={`hidden lg:flex items-center gap-2 px-4 py-2 bg-slate-50 rounded-full border border-slate-100 ml-4 max-w-xs truncate transition-colors cursor-pointer hover:bg-slate-100 shadow-sm`}
+              className="flex items-center gap-1.5 md:gap-2 px-3 md:px-4 py-1.5 md:py-2 bg-slate-50 rounded-full border border-slate-100 ml-2 md:ml-4 max-w-[120px] xs:max-w-[160px] md:max-w-xs truncate transition-colors cursor-pointer hover:bg-slate-100 shadow-sm"
             >
-              <MapPin size={14} className="text-orange-500 shrink-0" />
-              <span className="text-xs font-bold text-slate-600 truncate">
-                {formData.street ? `${formData.street}, ${formData.number}` : (config?.addressBase || 'Selecione o endereço')}
+              <MapPin size={12} className="text-orange-500 shrink-0 md:w-3.5 md:h-3.5" />
+              <span className="text-[10px] md:text-xs font-bold text-slate-600 truncate">
+                {formData.street ? `${formData.street}, ${formData.number}` : (config?.addressBase || 'Onde entregar?')}
               </span>
-              <ChevronDown size={14} className="text-slate-400" />
+              <ChevronDown size={12} className="text-slate-400 md:w-3.5 md:h-3.5" />
             </div>
           </div>
 
