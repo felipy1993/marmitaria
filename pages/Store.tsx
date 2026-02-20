@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useMemo } from 'react';
-import { getActiveProducts, createOrder, getRestaurantConfig, getCoupons, subscribeToOrder, incrementCouponUsage, getCustomerOrders, subscribeToRestaurantConfig } from '../services/database';
+import { getActiveProducts, createOrder, getRestaurantConfig, getCoupons, subscribeToOrder, incrementCouponUsage, getCustomerOrders, subscribeToRestaurantConfig, linkGuestOrdersToUser } from '../services/database';
 import { Product, PaymentMethod, OptionGroup, SelectedOption, Order, OrderStatus, RestaurantConfig, Coupon, OrderItem } from '../types';
 import { useCart } from '../App';
 import { 
@@ -126,6 +126,11 @@ const Store: React.FC = () => {
       const isEmailAdmin = user?.providerData.some((p: any) => p.providerId === 'password');
       if (user && !isEmailAdmin) {
         setCurrentUser(user);
+        // Ao logar, tenta vincular os pedidos de visitante ao UID do usuário
+        linkGuestOrdersToUser(guestId, user.uid).then(() => {
+          loadMyOrders();
+        });
+        
         if (!formData.customerName) {
           setFormData(prev => ({ ...prev, customerName: user.displayName || '' }));
         }
@@ -468,15 +473,20 @@ const Store: React.FC = () => {
   };
 
   const loadMyOrders = async () => {
+    // Busca cache local primeiro para resposta instantânea
+    const cached = localStorage.getItem('lastOrders');
+    if (cached) setMyOrders(JSON.parse(cached));
+
     try {
       const orders = await getCustomerOrders({ 
         userId: currentUser?.uid, 
         guestId 
       });
       setMyOrders(orders);
+      localStorage.setItem('lastOrders', JSON.stringify(orders));
     } catch (err: any) {
       console.error("Erro ao carregar pedidos:", err);
-      setMyOrders([]);
+      // Se falhar a rede, mantém o que está no estado (cache)
     }
   };
 
@@ -593,6 +603,7 @@ const Store: React.FC = () => {
       setOrderSuccess(docRef.id);
       setTrackingOrderId(docRef.id);
       localStorage.setItem('trackingOrderId', docRef.id);
+      loadMyOrders();
       showToast('Pedido enviado com sucesso! 🎉');
       clearCart();
       setIsCheckoutOpen(false);

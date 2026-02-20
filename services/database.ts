@@ -214,6 +214,22 @@ export const incrementCouponUsage = async (couponId: string) => {
   });
 };
 
+export const linkGuestOrdersToUser = async (guestId: string, userId: string) => {
+  const q = query(
+    collection(db, ORDERS_COLLECTION),
+    where('guestId', '==', guestId),
+    where('userId', '==', null)
+  );
+  const snapshot = await getDocs(q);
+  const updates = snapshot.docs.map(docSnapshot => 
+    updateDoc(doc(db, ORDERS_COLLECTION, docSnapshot.id), { 
+      userId,
+      guestId: null // Opcional: remove o guestId após vincular à conta real
+    })
+  );
+  await Promise.all(updates);
+};
+
 export const deleteCoupon = async (id: string) => {
   return await deleteDoc(doc(db, COUPONS_COLLECTION, id));
 };

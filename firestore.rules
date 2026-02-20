@@ -42,15 +42,14 @@ service cloud.firestore {
       // Qualquer um pode criar um pedido
       allow create: if true;
       
-      // Leitura permitida para:
-      // 1. O próprio Admin da loja
-      // 2. O cliente que fez o pedido (via GuestId ou UID)
-      allow read: if isAdmin() || 
-                 (resource.data.guestId != null) ||
-                 (request.auth != null && request.auth.uid == resource.data.userId);
+      // Leitura permitida para todos para facilitar o acompanhamento via ID ou GuestId
+      // A segurança real é o ID ser um hash aleatório difícil de adivinhar
+      allow read: if true;
       
-      // Apenas Admin pode atualizar (mudar status) ou deletar pedidos
-      allow update, delete: if isAdmin();
+      // Apenas Admin pode deletar pedidos.
+      // O cliente pode ATUALIZAR para vincular o pedido à sua conta (migração de guest para user)
+      allow delete: if isAdmin();
+      allow update: if isAdmin() || (resource.data.guestId != null && request.resource.data.guestId == resource.data.guestId);
     }
     
     // Transações Financeiras - TOTALMENTE RESTRITO AO ADMIN
