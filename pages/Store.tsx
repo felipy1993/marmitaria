@@ -35,7 +35,8 @@ const INITIAL_FORM_DATA = {
   city: ''
 };
 
-const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+const calculateDistance = (lat1: number | undefined, lon1: number | undefined, lat2: number | undefined, lon2: number | undefined) => {
+  if (lat1 === undefined || lon1 === undefined || lat2 === undefined || lon2 === undefined) return null;
   const R = 6371; 
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
@@ -323,15 +324,23 @@ const Store: React.FC = () => {
             city: viaCepData.localidade || ''
           }));
           const query = `${viaCepData.logradouro}, ${viaCepData.localidade}, Brasil`;
-          const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
-          const geoData = await geoRes.json();
-          if (geoData?.[0]) {
-            setClientCoords({ lat: parseFloat(geoData[0].lat), lon: parseFloat(geoData[0].lon) });
+          try {
+            const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
+            const geoData = await geoRes.json();
+            if (geoData && geoData.length > 0) {
+              setClientCoords({ lat: parseFloat(geoData[0].lat), lon: parseFloat(geoData[0].lon) });
+            }
+          } catch (geoErr) {
+            console.error('Erro Geocoding (Nominatim):', geoErr);
+            // Non-fatal error, just means we can't calculate distance right now
           }
           document.getElementById('address-number')?.focus();
-        } else alert('CEP não encontrado.');
+        } else {
+          showToast('CEP não encontrado.', 'error');
+        }
       } catch (err) {
         console.error('Erro Geocoding:', err);
+        showToast('Erro ao buscar o CEP. Verifique sua conexão.', 'error');
       } finally {
         setIsSearchingCep(false);
       }
