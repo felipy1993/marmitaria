@@ -600,6 +600,23 @@ const Store: React.FC = () => {
     }
   };
 
+  const handleRepeatOrder = (order: Order) => {
+    order.items.forEach(item => {
+      addToCart({
+        productId: `${item.productId || 'temp'}-${Date.now()}`,
+        name: item.name,
+        price: item.price,
+        quantity: item.quantity,
+        selectedOptions: item.selectedOptions || [],
+        observation: item.observation || '',
+        restaurantId: order.restaurantId
+      });
+    });
+    setIsMyOrdersOpen(false);
+    setIsCartOpen(true);
+    showToast('Itens adicionados à sua sacola! 🛍️');
+  };
+
   const filteredProducts = useMemo(() => {
     const today = new Date().getDay();
     return products.filter(p => {
@@ -866,6 +883,7 @@ const Store: React.FC = () => {
           myOrders={myOrders}
           onClose={() => setIsMyOrdersOpen(false)}
           onViewDetails={(order) => { setActiveOrder(order); setOrderSuccess(order.id!); setIsMyOrdersOpen(false); }}
+          onRepeatOrder={handleRepeatOrder}
         />
       )}
 

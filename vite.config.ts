@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['logo.png', 'favicon.ico', 'robots.txt', 'apple-touch-icon.png'],
+      includeAssets: ['logo.png', 'robots.txt'],
       manifest: {
         name: 'Sabor de Casa | Marmitaria',
         short_name: 'Sabor de Casa',
