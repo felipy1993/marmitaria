@@ -16,6 +16,16 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
   onClose,
   onBackToStart
 }) => {
+  const getStatusMessage = (status: string) => {
+    switch (status) {
+      case 'recebido': return 'Pedido recebido! Aguardando confirmação da loja.';
+      case 'em preparo': return 'Seu pedido está sendo preparado com carinho!';
+      case 'saiu para entrega': return 'O entregador já saiu com seu pedido!';
+      case 'finalizado': return 'Pedido entregue! Bom apetite! 😋';
+      default: return 'Estamos cuidando do seu pedido.';
+    }
+  };
+
   return (
     <div className="fixed inset-0 z-[200] flex items-center justify-center p-0 md:p-4 bg-slate-900/50 backdrop-blur-sm animate-fade-in">
        <div className="bg-white rounded-none md:rounded-2xl shadow-xl max-w-lg w-full h-full md:h-auto overflow-hidden animate-slide-up flex flex-col">
@@ -31,7 +41,9 @@ const OrderTrackingModal: React.FC<OrderTrackingModalProps> = ({
                 </div>
                 <div>
                   <h3 className="text-lg font-black text-slate-900 leading-tight capitalize">{activeOrder.status}</h3>
-                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Estamos preparando seu pedido</p>
+                  <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">
+                    {getStatusMessage(activeOrder.status)}
+                  </p>
                 </div>
              </div>
 

@@ -242,6 +242,27 @@ const AdminSettings: React.FC = () => {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Tempo p/ Entrega</label>
+                  <input 
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
+                    placeholder="Ex: 40-60 min"
+                    value={config.deliveryEstimate || ''} 
+                    onChange={e => setConfig({...config, deliveryEstimate: e.target.value})} 
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-black text-slate-400 uppercase mb-2">Tempo p/ Retirada</label>
+                  <input 
+                    className="w-full px-5 py-4 bg-slate-50 border border-slate-200 rounded-2xl font-bold outline-none" 
+                    placeholder="Ex: 20-30 min"
+                    value={config.pickupEstimate || ''} 
+                    onChange={e => setConfig({...config, pickupEstimate: e.target.value})} 
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-xs font-black text-slate-400 uppercase mb-2">Horário de Abertura</label>
                   <input 
                     type="time" 

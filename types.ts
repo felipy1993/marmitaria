@@ -99,6 +99,8 @@ export interface RestaurantConfig {
   whatsappNumber?: string;
   openingTime?: string; // e.g., "10:00"
   closingTime?: string; // e.g., "13:00"
+  deliveryEstimate?: string; // e.g., "40-60 min"
+  pickupEstimate?: string; // e.g., "20-30 min"
 }
 
 export interface Coupon {

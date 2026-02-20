@@ -1,6 +1,6 @@
 
 import React from 'react';
-import { X, Truck, ShoppingBag, User, MapPin, Loader2, Building2, CreditCard, MessageSquare, Check, ArrowRight } from 'lucide-react';
+import { X, Truck, ShoppingBag, User, MapPin, Loader2, Building2, CreditCard, MessageSquare, Check, ArrowRight, Clock } from 'lucide-react';
 import { PaymentMethod, RestaurantConfig } from '../../types';
 
 interface CheckoutModalProps {
@@ -114,6 +114,17 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     </div>
                     <h4 className="text-sm font-black text-slate-900 uppercase tracking-[0.2em]">Onde Entregar</h4>
                   </div>
+                  
+                  <div className="flex items-center gap-4 p-4 bg-orange-50 rounded-2xl border border-orange-100 max-w-fit">
+                     <div className="w-10 h-10 bg-white rounded-xl flex items-center justify-center text-orange-500 shadow-sm">
+                       <Clock size={20} />
+                     </div>
+                     <div>
+                       <p className="text-[9px] font-black text-orange-400 uppercase tracking-widest">Previsão de Entrega</p>
+                       <p className="text-sm font-black text-slate-900">{config?.deliveryEstimate || '45 - 60 min'}</p>
+                     </div>
+                  </div>
+
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     <div className="space-y-2">
                       <div className="flex justify-between items-center ml-4">
@@ -157,8 +168,8 @@ const CheckoutModal: React.FC<CheckoutModalProps> = ({
                     <p className="text-slate-700 font-black text-xl leading-tight">{config?.addressBase || 'Endereço não configurado'}</p>
                   </div>
                   <div className="bg-white/60 p-4 rounded-xl inline-block border border-orange-100">
-                    <p className="text-[10px] text-orange-800 font-bold uppercase tracking-widest">Tempo estimado de preparo</p>
-                    <p className="text-lg font-black text-slate-900">30 - 45 min</p>
+                    <p className="text-[10px] text-orange-800 font-bold uppercase tracking-widest">Tempo estimado de retirada</p>
+                    <p className="text-lg font-black text-slate-900">{config?.pickupEstimate || '30 - 45 min'}</p>
                   </div>
                 </div>
               )}
