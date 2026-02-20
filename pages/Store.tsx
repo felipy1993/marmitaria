@@ -258,6 +258,7 @@ const Store: React.FC = () => {
     }
 
     setIsSearchingCep(true);
+    setDeliveryDistance(null);
     navigator.geolocation.getCurrentPosition(async (position) => {
       try {
         const { latitude, longitude } = position.coords;
@@ -300,6 +301,8 @@ const Store: React.FC = () => {
   const handleCepChange = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, '');
     setFormData(prev => ({ ...prev, cep: cleanCep }));
+    setDeliveryDistance(null);
+    
     if (cleanCep.length === 8) {
       setIsSearchingCep(true);
       try {
