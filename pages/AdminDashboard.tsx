@@ -5,9 +5,13 @@ import { Order, OrderStatus, Product, Transaction } from '../types';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   TrendingUp, Activity, Wallet, PieChart, ArrowUpRight, ArrowDownRight,
-  ClipboardList, ChevronRight, ShoppingBag
+  ClipboardList, ChevronRight, ShoppingBag, LayoutPanelLeft, BarChart3, PieChart as PieChartIcon, Target
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
+import { 
+  LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
+  BarChart, Bar, Cell, PieChart, Pie
+} from 'recharts';
 
 const AdminDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -68,6 +72,43 @@ const AdminDashboard: React.FC = () => {
     return { totalIncome, expenses, profit };
   }, [orders, monthTransactions]);
 
+  // Dados para os Gráficos
+  const chartData = useMemo(() => {
+    const last7Days = [...Array(7)].map((_, i) => {
+      const d = new Date();
+      d.setDate(d.getDate() - (6 - i));
+      d.setHours(0, 0, 0, 0);
+      return d.getTime();
+    });
+
+    return last7Days.map(timestamp => {
+      const dayOrders = orders.filter(o => {
+        const orderDate = new Date(o.createdAt).setHours(0, 0, 0, 0);
+        return orderDate === timestamp && o.status === OrderStatus.FINISHED;
+      });
+      
+      const total = dayOrders.reduce((acc, curr) => acc + curr.total, 0);
+      return {
+        name: new Date(timestamp).toLocaleDateString('pt-BR', { weekday: 'short' }),
+        vendas: total
+      };
+    });
+  }, [orders]);
+
+  const topProductsData = useMemo(() => {
+    const productsMap: Record<string, number> = {};
+    orders.filter(o => o.status === OrderStatus.FINISHED).forEach(order => {
+      order.items.forEach(item => {
+        productsMap[item.name] = (productsMap[item.name] || 0) + item.quantity;
+      });
+    });
+
+    return Object.entries(productsMap)
+      .map(([name, value]) => ({ name, value }))
+      .sort((a, b) => b.value - a.value)
+      .slice(0, 5);
+  }, [orders]);
+
   const activeOrdersCount = orders.filter((o: Order) => o.status !== OrderStatus.FINISHED).length;
 
   if (loading) return (
@@ -127,6 +168,91 @@ const AdminDashboard: React.FC = () => {
              <h3 className="text-3xl font-black text-slate-900">{activeProductsCount} Itens</h3>
              <p className="text-[10px] text-green-500 font-bold mt-2">Itens disponíveis na loja</p>
           </div>
+        </div>
+
+        {/* Seção de Gráficos Profissionais */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
+          <section className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">Tendência de Vendas</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Faturamento dos últimos 7 dias</p>
+              </div>
+              <div className="w-10 h-10 bg-orange-50 rounded-xl flex items-center justify-center text-orange-500">
+                <BarChart3 size={20} />
+              </div>
+            </div>
+            
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={chartData}>
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                  <XAxis 
+                    dataKey="name" 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                    dy={10}
+                  />
+                  <YAxis 
+                    axisLine={false} 
+                    tickLine={false} 
+                    tick={{ fill: '#94a3b8', fontSize: 10, fontWeight: 700 }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                    cursor={{ stroke: '#f1f5f9' }}
+                  />
+                  <Line 
+                    type="monotone" 
+                    dataKey="vendas" 
+                    stroke="#f97316" 
+                    strokeWidth={4} 
+                    dot={{ r: 6, fill: '#f97316', strokeWidth: 2, stroke: '#fff' }}
+                    activeDot={{ r: 8, strokeWidth: 0 }}
+                  />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
+
+          <section className="bg-white rounded-[3rem] p-10 border border-slate-100 shadow-sm overflow-hidden">
+            <div className="flex items-center justify-between mb-8">
+              <div>
+                <h3 className="text-xl font-black text-slate-900">Produtos Destaque</h3>
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Top 5 marmitas mais vendidas</p>
+              </div>
+              <div className="w-10 h-10 bg-blue-50 rounded-xl flex items-center justify-center text-blue-500">
+                <Target size={20} />
+              </div>
+            </div>
+
+            <div className="h-[300px] w-full">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topProductsData} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" horizontal={false} stroke="#f1f5f9" />
+                  <XAxis type="number" hide />
+                  <YAxis 
+                    dataKey="name" 
+                    type="category" 
+                    axisLine={false} 
+                    tickLine={false}
+                    tick={{ fill: '#64748b', fontSize: 10, fontWeight: 800 }}
+                    width={100}
+                  />
+                  <Tooltip 
+                    cursor={{ fill: '#f8fafc' }}
+                    contentStyle={{ borderRadius: '16px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)', fontWeight: 'bold' }}
+                  />
+                  <Bar dataKey="value" fill="#3b82f6" radius={[0, 10, 10, 0]} barSize={20}>
+                    {topProductsData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={['#3b82f6', '#60a5fa', '#93c5fd', '#bfdbfe', '#dbeafe'][index % 5]} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </section>
         </div>
 
         {/* Seção Central - Saúde Financeira vs Operação */}

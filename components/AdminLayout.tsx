@@ -1,7 +1,7 @@
 
 import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { signOut } from 'firebase/auth';
+import { signOut, onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../firebase-config';
 import { 
   LayoutDashboard, ClipboardList, ShoppingBag, PieChart, Settings2, 
@@ -15,8 +15,32 @@ interface AdminLayoutProps {
 
 const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeOrdersCount = 0 }) => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [isVerifying, setIsVerifying] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
+
+  React.useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      if (!user) {
+        navigate('/admin/login');
+        return;
+      }
+
+      // Verifica se o usuário entrou via email e senha (provedor de admin)
+      // No modelo White Label, qualquer conta criada no Auth via Email/Senha é Admin
+      const isPasswordProvider = user.providerData.some(p => p.providerId === 'password');
+      
+      if (!isPasswordProvider) {
+        // Se não for admin (ex: cliente logado com Google), desloga e manda pra login
+        signOut(auth).then(() => navigate('/admin/login'));
+        return;
+      }
+
+      setIsVerifying(false);
+    });
+
+    return () => unsubscribe();
+  }, [navigate]);
 
   const menuItems = [
     { path: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
@@ -34,6 +58,17 @@ const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeOrdersCount =
       console.error('Erro ao sair:', err);
     }
   };
+
+  if (isVerifying) {
+    return (
+      <div className="h-screen flex items-center justify-center bg-slate-900">
+        <div className="flex flex-col items-center gap-4">
+          <div className="w-16 h-16 border-4 border-orange-500/20 border-t-orange-500 rounded-full animate-spin"></div>
+          <p className="text-white font-black text-xs uppercase tracking-[0.2em] animate-pulse">Verificando Acesso...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row">
