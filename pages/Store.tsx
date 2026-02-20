@@ -55,7 +55,13 @@ const Store: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('Marmitas');
   const [isSearchingCep, setIsSearchingCep] = useState(false);
-  const [deliveryDistance, setDeliveryDistance] = useState<number | null>(null);
+  const [clientCoords, setClientCoords] = useState<{lat: number, lon: number} | null>(null);
+
+  const deliveryDistance = useMemo(() => {
+    if (!config || !clientCoords || config.latitude === undefined || config.longitude === undefined) return null;
+    return calculateDistance(config.latitude, config.longitude, clientCoords.lat, clientCoords.lon);
+  }, [config, clientCoords]);
+
   const isOutsideRadius = useMemo(() => {
     if (deliveryDistance === null || !config) return false;
     return deliveryDistance > (config.deliveryRadiusKm || 10);
@@ -258,7 +264,7 @@ const Store: React.FC = () => {
     }
 
     setIsSearchingCep(true);
-    setDeliveryDistance(null);
+    setClientCoords(null);
     navigator.geolocation.getCurrentPosition(async (position) => {
       try {
         const { latitude, longitude } = position.coords;
@@ -277,11 +283,7 @@ const Store: React.FC = () => {
             city: city || town || village || ''
           }));
 
-          if (config?.latitude && config?.longitude) {
-            const distance = calculateDistance(config.latitude, config.longitude, latitude, longitude);
-            setDeliveryDistance(distance);
-          }
-
+          setClientCoords({ lat: latitude, lon: longitude });
           showToast('Localização detectada com sucesso!', 'success');
         } else {
           showToast('Não foi possível obter o endereço exato.', 'info');
@@ -301,7 +303,7 @@ const Store: React.FC = () => {
   const handleCepChange = async (cep: string) => {
     const cleanCep = cep.replace(/\D/g, '');
     setFormData(prev => ({ ...prev, cep: cleanCep }));
-    setDeliveryDistance(null);
+    setClientCoords(null);
     
     if (cleanCep.length === 8) {
       setIsSearchingCep(true);
@@ -318,9 +320,8 @@ const Store: React.FC = () => {
           const query = `${viaCepData.logradouro}, ${viaCepData.localidade}, Brasil`;
           const geoRes = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1`);
           const geoData = await geoRes.json();
-          if (geoData?.[0] && config?.latitude && config?.longitude) {
-            const distance = calculateDistance(config.latitude, config.longitude, parseFloat(geoData[0].lat), parseFloat(geoData[0].lon));
-            setDeliveryDistance(distance);
+          if (geoData?.[0]) {
+            setClientCoords({ lat: parseFloat(geoData[0].lat), lon: parseFloat(geoData[0].lon) });
           }
           document.getElementById('address-number')?.focus();
         } else alert('CEP não encontrado.');

@@ -4,7 +4,7 @@ import { getRestaurantConfig, updateRestaurantConfig, getCoupons, addCoupon, del
 import { RestaurantConfig, Coupon } from '../types';
 import { useNavigate } from 'react-router-dom';
 import { 
-  Save, Plus, Trash2, Tag, Truck, MapPin, Search, Loader2, Coins, Target, Eye
+  Save, Plus, Trash2, Tag, Truck, MapPin, Search, Loader2, Coins, Target, Eye, Navigation
 } from 'lucide-react';
 import AdminLayout from '../components/AdminLayout';
 import { useToast } from '../components/Toast';
@@ -81,6 +81,31 @@ const AdminSettings: React.FC = () => {
     } finally {
       setIsFetchingGeo(false);
     }
+  };
+
+  const getStoreLocation = () => {
+    if (!navigator.geolocation) {
+      showToast("Seu navegador não suporta geolocalização.", "error");
+      return;
+    }
+
+    setIsFetchingGeo(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setConfig(prev => ({
+          ...prev,
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude
+        }));
+        showToast("Coordenadas obtidas via GPS com sucesso!", "success");
+        setIsFetchingGeo(false);
+      },
+      (err) => {
+        showToast("Não foi possível obter sua localização atual.", "error");
+        setIsFetchingGeo(false);
+      },
+      { enableHighAccuracy: true }
+    );
   };
 
   const handleSaveConfig = async (e: React.FormEvent) => {
@@ -236,28 +261,42 @@ const AdminSettings: React.FC = () => {
                 </div>
               </div>
 
-              <div className="grid grid-cols-2 gap-4 p-6 bg-slate-50 rounded-[2rem] border border-slate-200">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Latitude</label>
-                  <input 
-                    type="number"
-                    step="0.000001"
-                    className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0 p-0" 
-                    value={config.latitude} 
-                    onChange={e => setConfig({...config, latitude: parseFloat(e.target.value)})}
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Longitude</label>
-                  <input 
-                    type="number"
-                    step="0.000001"
-                    className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0 p-0" 
-                    value={config.longitude} 
-                    onChange={e => setConfig({...config, longitude: parseFloat(e.target.value)})}
-                  />
-                </div>
-              </div>
+               <div className="p-6 bg-slate-50 rounded-[2rem] border border-slate-200 space-y-4">
+                 <div className="flex justify-between items-center px-1">
+                   <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Coordenadas GPS</label>
+                   <button 
+                     type="button" 
+                     onClick={getStoreLocation}
+                     className="flex items-center gap-1.5 text-[10px] font-black text-orange-500 uppercase tracking-wider hover:text-orange-600 transition-colors"
+                     disabled={isFetchingGeo}
+                   >
+                     <Navigation size={12} />
+                     Capturar minha posição
+                   </button>
+                 </div>
+                 <div className="grid grid-cols-2 gap-4">
+                   <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Latitude</label>
+                     <input 
+                       type="number"
+                       step="0.000001"
+                       className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0 p-0" 
+                       value={config.latitude} 
+                       onChange={e => setConfig({...config, latitude: parseFloat(e.target.value)})}
+                     />
+                   </div>
+                   <div>
+                     <label className="block text-[10px] font-black text-slate-400 uppercase mb-1">Longitude</label>
+                     <input 
+                       type="number"
+                       step="0.000001"
+                       className="w-full bg-transparent border-none font-black text-slate-900 focus:ring-0 p-0" 
+                       value={config.longitude} 
+                       onChange={e => setConfig({...config, longitude: parseFloat(e.target.value)})}
+                     />
+                   </div>
+                 </div>
+               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
